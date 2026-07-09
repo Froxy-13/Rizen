@@ -1,11 +1,10 @@
+import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/annonce.dart';
-import 'dart:io';
 
 class AnnonceService {
   final _client = Supabase.instance.client;
 
-  /// Récupère les annonces actives avec leurs images (triées par date)
   Future<List<Annonce>> getAnnonces({int? categorieId}) async {
     List<dynamic> data;
 
@@ -27,7 +26,6 @@ class AnnonceService {
     return data.map((e) => Annonce.fromMap(e)).toList();
   }
 
-  /// Récupère les 7 catégories
   Future<List<Map<String, dynamic>>> getCategories() async {
     final data = await _client
         .from('categories')
@@ -36,7 +34,6 @@ class AnnonceService {
     return List<Map<String, dynamic>>.from(data);
   }
 
-  /// Toggle favori (ajoute ou retire)
   Future<void> toggleFavori(int annonceId, String userId, bool estFavori) async {
     if (estFavori) {
       await _client.from('favoris').delete().match({
@@ -51,7 +48,6 @@ class AnnonceService {
     }
   }
 
-  /// Récupère les IDs des favoris de l'utilisateur
   Future<Set<int>> getFavorisIds(String userId) async {
     final data = await _client
         .from('favoris')
@@ -60,7 +56,6 @@ class AnnonceService {
     return (data as List).map((e) => e['annonce_id'] as int).toSet();
   }
 
-  /// Récupère une annonce par son ID avec images + profil vendeur
   Future<Map<String, dynamic>> getAnnonceById(int id) async {
     final data = await _client
         .from('annonces')
@@ -70,7 +65,6 @@ class AnnonceService {
     return data;
   }
 
-  /// Signaler une annonce
   Future<void> signalerAnnonce({
     required int annonceId,
     required String userId,
@@ -84,7 +78,7 @@ class AnnonceService {
       'description': description,
     });
   }
-  /// Crée une annonce avec ses images
+
   Future<int> creerAnnonce({
     required String titre,
     required String description,
@@ -95,7 +89,6 @@ class AnnonceService {
     required String userId,
     required List<String> urlsImages,
   }) async {
-    // 1. Créer l'annonce
     final result = await _client.from('annonces').insert({
       'titre': titre,
       'description': description,
@@ -109,7 +102,6 @@ class AnnonceService {
 
     final annonceId = result['id'] as int;
 
-    // 2. Ajouter les images
     for (int i = 0; i < urlsImages.length; i++) {
       await _client.from('images_annonce').insert({
         'annonce_id': annonceId,
@@ -121,7 +113,6 @@ class AnnonceService {
     return annonceId;
   }
 
-  /// Upload une image dans Supabase Storage et retourne son URL publique
   Future<String> uploadImage(String filePath) async {
     final fileName = '${DateTime.now().millisecondsSinceEpoch}_${filePath.split('/').last}';
     final bytes = await File(filePath).readAsBytes();
@@ -129,9 +120,42 @@ class AnnonceService {
     await _client.storage.from('annonces-images').uploadBinary(
       fileName,
       bytes,
-      fileOptions: const FileOptions(contentType: 'image/jpeg'),
     );
 
     return _client.storage.from('annonces-images').getPublicUrl(fileName);
+  }
+
+  /// Récupère les négociations acceptées de l'utilisateur connecté (acheteur)
+  /// Retourne un Map<annonceId, prixNégocié>
+  Future<Map<int, double>> getMesNegociationsAcceptees(String userId) async {
+    final data = await _client
+        .from('negociations')
+        .select('annonce_id, prix_propose')
+        .eq('acheteur_id', userId)
+        .eq('statut', 'acceptee');
+
+    final Map<int, double> result = {};
+    for (final n in data) {
+      result[n['annonce_id'] as int] = (n['prix_propose'] as num).toDouble();
+    }
+    return result;
+  }
+
+  /// Récupère les négociations acceptées sur les annonces du vendeur
+  /// Retourne un Map<annonceId, List<prixNégocié>>
+  Future<Map<int, List<double>>> getNegociationsAccepteesVendeur(String userId) async {
+    final data = await _client
+        .from('negociations')
+        .select('annonce_id, prix_propose')
+        .eq('vendeur_id', userId)
+        .eq('statut', 'acceptee');
+
+    final Map<int, List<double>> result = {};
+    for (final n in data) {
+      final annonceId = n['annonce_id'] as int;
+      final prix = (n['prix_propose'] as num).toDouble();
+      result.putIfAbsent(annonceId, () => []).add(prix);
+    }
+    return result;
   }
 }

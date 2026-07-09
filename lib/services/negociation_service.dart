@@ -53,15 +53,10 @@ class NegociationService {
         .update({'statut': 'acceptee'})
         .eq('id', negociationId);
 
-    await _client
-        .from('annonces')
-        .update({'prix_actuel': prixAccepte})
-        .eq('id', annonceId);
-
     await _client.from('messages').insert({
       'conversation_id': conversationId,
       'sender_id': userId,
-      'contenu': 'Proposition acceptée - Nouveau prix : ${prixAccepte.toStringAsFixed(0)} FCFA',
+      'contenu': 'Proposition acceptée - Prix convenu : ${prixAccepte.toStringAsFixed(0)} FCFA',
       'type': 'texte',
     });
   }

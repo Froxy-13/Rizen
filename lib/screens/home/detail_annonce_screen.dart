@@ -23,6 +23,8 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
   bool _loading = true;
   int _photoIndex = 0;
   bool _estFavori = false;
+  double? _prixNegocie;
+  List<double> _prixNegociesVendeur = [];
 
   @override
   void initState() {
@@ -35,13 +37,32 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
       final data = await _service.getAnnonceById(widget.annonceId);
       final userId = Supabase.instance.client.auth.currentUser?.id;
       bool favori = false;
+      double? prixNegocie;
+      List<double> prixVendeur = [];
+
       if (userId != null) {
         final ids = await _service.getFavorisIds(userId);
         favori = ids.contains(widget.annonceId);
+
+        // Prix négocié pour l'acheteur
+        final negAcheteur =
+        await _service.getMesNegociationsAcceptees(userId);
+        prixNegocie = negAcheteur[widget.annonceId];
+
+        // Prix négociés pour le vendeur (si c'est son annonce)
+        final vendeurId = data['utilisateur_id'] as String;
+        if (vendeurId == userId) {
+          final negVendeur =
+          await _service.getNegociationsAccepteesVendeur(userId);
+          prixVendeur = negVendeur[widget.annonceId] ?? [];
+        }
       }
+
       setState(() {
         _data = data;
         _estFavori = favori;
+        _prixNegocie = prixNegocie;
+        _prixNegociesVendeur = prixVendeur;
         _loading = false;
       });
     } catch (e) {
@@ -58,7 +79,8 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Connectez-vous pour ajouter aux favoris')),
+        const SnackBar(
+            content: Text('Connectez-vous pour ajouter aux favoris')),
       );
       return;
     }
@@ -74,7 +96,9 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Connectez-vous pour signaler une annonce')),
+        const SnackBar(
+            content:
+            Text('Connectez-vous pour signaler une annonce')),
       );
       return;
     }
@@ -86,7 +110,8 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setStateDialog) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
           title: Text(
             'Signaler cette annonce',
             style: TextStyle(
@@ -102,14 +127,15 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
               DropdownButtonFormField<String>(
                 value: raisonSelectionnee,
                 hint: Text('Choisir une raison',
-                    style: TextStyle(color: AppColors.rosyTaupe, fontSize: 13)),
+                    style: TextStyle(
+                        color: AppColors.rosyTaupe, fontSize: 13)),
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: AppColors.paleOak),
                   ),
-                  contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
                 ),
                 items: [
                   'Contenu inapproprié',
@@ -117,8 +143,15 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                   'Article déjà vendu',
                   'Informations fausses',
                   'Autre',
-                ].map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 13)))).toList(),
-                onChanged: (v) => setStateDialog(() => raisonSelectionnee = v),
+                ]
+                    .map((r) => DropdownMenuItem(
+                    value: r,
+                    child: Text(r,
+                        style:
+                        const TextStyle(fontSize: 13))))
+                    .toList(),
+                onChanged: (v) =>
+                    setStateDialog(() => raisonSelectionnee = v),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -190,7 +223,8 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
     if (_loading) {
       return const Scaffold(
         body: Center(
-            child: CircularProgressIndicator(color: AppColors.dustyRose)),
+            child:
+            CircularProgressIndicator(color: AppColors.dustyRose)),
       );
     }
 
@@ -210,7 +244,10 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
     final prix = (_data!['prix_actuel'] as num).toDouble();
     final ville = _data!['ville'] as String?;
     final quartier = _data!['quartier'] as String?;
-    final localisation = [quartier, ville].where((e) => e != null).join(', ');
+    final localisation =
+    [quartier, ville].where((e) => e != null).join(', ');
+    final estVendeur = _data!['utilisateur_id'] ==
+        Supabase.instance.client.auth.currentUser?.id;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -229,7 +266,8 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                   color: AppColors.white.withOpacity(0.9),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.arrow_back, color: AppColors.onSurface),
+                child:
+                Icon(Icons.arrow_back, color: AppColors.onSurface),
               ),
             ),
             actions: [
@@ -274,18 +312,22 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                       left: 0,
                       right: 0,
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisAlignment:
+                        MainAxisAlignment.center,
                         children: List.generate(
                           images.length,
                               (i) => Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 3),
                             width: _photoIndex == i ? 16 : 6,
                             height: 6,
                             decoration: BoxDecoration(
                               color: _photoIndex == i
                                   ? AppColors.dustyRose
-                                  : AppColors.white.withOpacity(0.6),
-                              borderRadius: BorderRadius.circular(9999),
+                                  : AppColors.white
+                                  .withOpacity(0.6),
+                              borderRadius:
+                              BorderRadius.circular(9999),
                             ),
                           ),
                         ),
@@ -303,16 +345,97 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Prix
-                  Text(
-                    '${prix.toStringAsFixed(0)} FCFA',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.mauveShadow,
+                  // Prix — logique acheteur vs vendeur
+                  if (_prixNegocie != null) ...[
+                    // Acheteur avec prix négocié
+                    Text(
+                      '${prix.toStringAsFixed(0)} FCFA',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 16,
+                        color: AppColors.rosyTaupe,
+                        decoration: TextDecoration.lineThrough,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${_prixNegocie!.toStringAsFixed(0)} FCFA',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.mauveShadow,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.softBlush,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Prix négocié pour vous',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.dustyRose,
+                        ),
+                      ),
+                    ),
+                  ] else if (estVendeur &&
+                      _prixNegociesVendeur.isNotEmpty) ...[
+                    // Vendeur avec négociations acceptées
+                    Text(
+                      '${prix.toStringAsFixed(0)} FCFA',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.mauveShadow,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.softBlush,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.info_outline,
+                              size: 14, color: AppColors.dustyRose),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${_prixNegociesVendeur.length} acheteur${_prixNegociesVendeur.length > 1 ? 's ont' : ' a'} un prix négocié',
+                            style: TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.dustyRose,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    // Prix normal
+                    Text(
+                      '${prix.toStringAsFixed(0)} FCFA',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.mauveShadow,
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 6),
 
                   // Titre
@@ -454,22 +577,29 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  final userId = Supabase.instance.client.auth.currentUser?.id;
+                  final userId =
+                      Supabase.instance.client.auth.currentUser?.id;
                   if (userId == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Connectez-vous pour contacter le vendeur')),
+                      const SnackBar(
+                          content: Text(
+                              'Connectez-vous pour contacter le vendeur')),
                     );
                     return;
                   }
-                  final vendeurId = _data!['utilisateur_id'] as String;
+                  final vendeurId =
+                  _data!['utilisateur_id'] as String;
                   if (vendeurId == userId) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Vous ne pouvez pas vous contacter vous-même')),
+                      const SnackBar(
+                          content: Text(
+                              'Vous ne pouvez pas vous contacter vous-même')),
                     );
                     return;
                   }
                   final messageService = MessageService();
-                  final convId = await messageService.getOrCreateConversation(
+                  final convId =
+                  await messageService.getOrCreateConversation(
                     annonceId: widget.annonceId,
                     userId: userId,
                     vendeurId: vendeurId,
@@ -507,16 +637,21 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  final userId = Supabase.instance.client.auth.currentUser?.id;
+                  final userId =
+                      Supabase.instance.client.auth.currentUser?.id;
                   if (userId == null) return;
-                  final vendeurId = _data!['utilisateur_id'] as String;
+                  final vendeurId =
+                  _data!['utilisateur_id'] as String;
                   if (vendeurId == userId) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Vous ne pouvez pas négocier votre propre annonce')),
+                      const SnackBar(
+                          content: Text(
+                              'Vous ne pouvez pas négocier votre propre annonce')),
                     );
                     return;
                   }
-                  final prix = (_data!['prix_actuel'] as num).toDouble();
+                  final prixAffiche =
+                      _prixNegocie ?? prix;
                   showModalBottomSheet(
                     context: context,
                     isScrollControlled: true,
@@ -524,7 +659,7 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                     builder: (_) => NegociationBottomSheet(
                       annonceId: widget.annonceId,
                       vendeurId: vendeurId,
-                      prixActuel: prix,
+                      prixActuel: prixAffiche,
                       titrAnnonce: _data!['titre'],
                     ),
                   );
