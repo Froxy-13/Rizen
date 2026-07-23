@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../services/message_service.dart';
 import '../messages/chat_screen.dart';
 import '../negociations/negociation_screen.dart';
+import '../transaction/paiement_screen.dart';
 
 class DetailAnnonceScreen extends StatefulWidget {
   final int annonceId;
@@ -572,6 +573,49 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
               ),
             ),
             const SizedBox(width: 12),
+
+            // Acheter
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final userId = Supabase.instance.client.auth.currentUser?.id;
+                  if (userId == null) return;
+                  final vendeurId = _data!['utilisateur_id'] as String;
+                  if (vendeurId == userId) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Vous ne pouvez pas acheter votre propre annonce')),
+                    );
+                    return;
+                  }
+                  final prixFinal = _prixNegocie ?? prix;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PaiementScreen(
+                        annonceId: widget.annonceId,
+                        vendeurId: vendeurId,
+                        titreAnnonce: _data!['titre'],
+                        montant: prixFinal,
+                      ),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.dustyRose,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.shopping_bag_outlined, size: 18),
+                label: const Text('Acheter',
+                    style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontWeight: FontWeight.w600)),
+              ),
+            ),
+            const SizedBox(width: 8),
 
             // Contacter
             Expanded(

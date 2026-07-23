@@ -158,4 +158,66 @@ class AnnonceService {
     }
     return result;
   }
+
+  /// Retourne les meilleurs vendeurs classés par note moyenne (avis reçus
+  /// en tant que vendeur uniquement, donc emetteur = 'acheteur').
+  Future<List<Map<String, dynamic>>> getTopVendeurs({int limite = 5}) async {
+    // 1. Tous les avis reçus par des vendeurs
+    final avisData = await _client
+        .from('avis')
+        .select('vendeur_id, note')
+        .eq('emetteur', 'acheteur');
+
+    if (avisData.isEmpty) return [];
+
+    // 2. Moyenne + nombre d'avis par vendeur (agrégation côté Dart)
+    final Map<String, List<int>> notesParVendeur = {};
+    for (final avis in avisData) {
+      final vendeurId = avis['vendeur_id'] as String;
+      final note = avis['note'] as int;
+      notesParVendeur.putIfAbsent(vendeurId, () => []).add(note);
+    }
+
+    final stats = notesParVendeur.entries.map((e) {
+      final moyenne = e.value.reduce((a, b) => a + b) / e.value.length;
+      return {
+        'vendeur_id': e.key,
+        'note_moyenne': moyenne,
+        'nombre_avis': e.value.length,
+      };
+    }).toList();
+
+    // 3. Tri : meilleure note d'abord, puis le plus d'avis en cas d'égalité
+    stats.sort((a, b) {
+      final cmp = (b['note_moyenne'] as double)
+          .compareTo(a['note_moyenne'] as double);
+      if (cmp != 0) return cmp;
+      return (b['nombre_avis'] as int).compareTo(a['nombre_avis'] as int);
+    });
+
+    final top = stats.take(limite).toList();
+    final ids = top.map((e) => e['vendeur_id'] as String).toList();
+
+    // 4. Requête séparée pour les profils (comme partout ailleurs dans le code)
+    final profils = await _client
+        .from('profils')
+        .select('id, prenom, nom, photo')
+        .inFilter('id', ids);
+
+    // 5. Fusion stats + profil
+    return top.map((stat) {
+      final profil = profils.firstWhere(
+            (p) => p['id'] == stat['vendeur_id'],
+        orElse: () => <String, dynamic>{},
+      );
+      return {
+        'id': stat['vendeur_id'],
+        'prenom': profil['prenom'] ?? 'Vendeur',
+        'nom': profil['nom'] ?? '',
+        'photo': profil['photo'],
+        'note_moyenne': stat['note_moyenne'],
+        'nombre_avis': stat['nombre_avis'],
+      };
+    }).toList();
+  }
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
+import '../main_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -21,6 +23,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
   final _authService = AuthService();
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
@@ -38,9 +41,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _inscription() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
-
     try {
       await _authService.inscription(
         email: _emailController.text.trim(),
@@ -50,12 +51,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         telephone: _telephoneController.text.trim(),
         adresse: _adresseController.text.trim(),
       );
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Compte créé avec succès'),
-            backgroundColor: Color(0xFF326850),
+            backgroundColor: AppColors.success,
           ),
         );
         Navigator.pop(context);
@@ -80,6 +80,69 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  Future<void> _connexionGoogle() async {
+    setState(() => _isGoogleLoading = true);
+    try {
+      const webClientId =
+          '993089007993-1cs8lggo5ir2un1nacan3270hhqcnil9.apps.googleusercontent.com';
+      const androidClientId =
+          '993089007993-1n4qb344tiv5ktnod3c8n5nhm6mgvqoa.apps.googleusercontent.com';
+
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        clientId: androidClientId,
+        serverClientId: webClientId,
+      );
+
+      final googleUser = await googleSignIn.signIn();
+      if (googleUser == null) return;
+
+      final googleAuth = await googleUser.authentication;
+      final accessToken = googleAuth.accessToken;
+      final idToken = googleAuth.idToken;
+
+      if (accessToken == null || idToken == null) {
+        throw Exception('Tokens Google manquants');
+      }
+
+      await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: accessToken,
+      );
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur Google : $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
+    }
+  }
+
+  Widget _buildLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: 'PlusJakartaSans',
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: AppColors.onSurface,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -88,203 +151,229 @@ class _RegisterScreenState extends State<RegisterScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          color: AppColors.onSurface,
+          icon: Icon(Icons.arrow_back, color: AppColors.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Créer un compte',
           style: TextStyle(
-            fontSize: 18,
+            fontFamily: 'PlusJakartaSans',
             fontWeight: FontWeight.w600,
+            fontSize: 16,
             color: AppColors.onSurface,
           ),
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-                Text(
-                  'Rejoignez Rizen',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.onSurface,
-                    letterSpacing: -0.01,
+                // Bouton Google
+                OutlinedButton(
+                  onPressed: _isGoogleLoading ? null : _connexionGoogle,
+                  child: _isGoogleLoading
+                      ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                      : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.network(
+                        'https://www.google.com/favicon.ico',
+                        width: 20,
+                        height: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'S\'inscrire avec Google',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: AppColors.onSurface,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Créez votre compte pour acheter et vendre',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.onSurfaceVariant,
-                  ),
+
+                const SizedBox(height: 20),
+
+                // Séparateur
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: AppColors.paleOak)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'ou',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          color: AppColors.rosyTaupe,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: AppColors.paleOak)),
+                  ],
                 ),
-                const SizedBox(height: 32),
+
+                const SizedBox(height: 20),
 
                 // Prénom
+                _buildLabel('PRÉNOM'),
                 TextFormField(
                   controller: _prenomController,
                   textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Prénom',
-                    hintText: 'Votre prénom',
-                    prefixIcon: Icon(Icons.person_outline),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez entrer votre prénom';
-                    }
-                    return null;
-                  },
+                  style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      color: AppColors.onSurface,
+                      fontSize: 14),
+                  decoration: const InputDecoration(hintText: 'Abdoulaye'),
+                  validator: (v) =>
+                  v == null || v.isEmpty ? 'Champ obligatoire' : null,
                 ),
                 const SizedBox(height: 16),
 
                 // Nom
+                _buildLabel('NOM'),
                 TextFormField(
                   controller: _nomController,
                   textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Nom',
-                    hintText: 'Votre nom de famille',
-                    prefixIcon: Icon(Icons.person_outline),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez entrer votre nom';
-                    }
-                    return null;
-                  },
+                  style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      color: AppColors.onSurface,
+                      fontSize: 14),
+                  decoration: const InputDecoration(hintText: 'Diop'),
+                  validator: (v) =>
+                  v == null || v.isEmpty ? 'Champ obligatoire' : null,
                 ),
                 const SizedBox(height: 16),
 
                 // Email
+                _buildLabel('EMAIL'),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'exemple@email.com',
-                    prefixIcon: Icon(Icons.mail_outline),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez entrer votre email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Email invalide';
-                    }
+                  style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      color: AppColors.onSurface,
+                      fontSize: 14),
+                  decoration:
+                  const InputDecoration(hintText: 'contact@rizen.sn'),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Champ obligatoire';
+                    if (!v.contains('@')) return 'Email invalide';
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
 
                 // Téléphone
+                _buildLabel('TÉLÉPHONE'),
                 TextFormField(
                   controller: _telephoneController,
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Téléphone',
-                    hintText: '+221 XX XXX XX XX',
-                    prefixIcon: Icon(Icons.phone_outlined),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez entrer votre téléphone';
-                    }
-                    return null;
-                  },
+                  style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      color: AppColors.onSurface,
+                      fontSize: 14),
+                  decoration:
+                  const InputDecoration(hintText: '77 000 00 00'),
+                  validator: (v) =>
+                  v == null || v.isEmpty ? 'Champ obligatoire' : null,
                 ),
                 const SizedBox(height: 16),
 
-                // Adresse / Quartier
+                // Quartier / Adresse
+                _buildLabel('QUARTIER / ADRESSE'),
                 TextFormField(
                   controller: _adresseController,
                   textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Quartier / Adresse',
-                    hintText: 'Ex: Ouest Foire, Dakar',
-                    prefixIcon: Icon(Icons.location_on_outlined),
+                  style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      color: AppColors.onSurface,
+                      fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Mermoz, Dakar',
+                    suffixIcon: Icon(Icons.location_on_outlined,
+                        color: AppColors.rosyTaupe, size: 20),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez entrer votre quartier';
-                    }
-                    return null;
-                  },
+                  validator: (v) =>
+                  v == null || v.isEmpty ? 'Champ obligatoire' : null,
                 ),
-
                 const SizedBox(height: 16),
+
                 // Mot de passe
+                _buildLabel('MOT DE PASSE'),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
+                  style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      color: AppColors.onSurface,
+                      fontSize: 14),
                   decoration: InputDecoration(
-                    labelText: 'Mot de passe',
                     hintText: '••••••••',
-                    prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
+                        color: AppColors.rosyTaupe,
+                        size: 20,
                       ),
-                      onPressed: () {
-                        setState(
-                                () => _obscurePassword = !_obscurePassword);
-                      },
+                      onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez entrer un mot de passe';
-                    }
-                    if (value.length < 6) {
-                      return 'Minimum 6 caractères';
-                    }
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Champ obligatoire';
+                    if (v.length < 6) return 'Minimum 6 caractères';
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
 
                 // Confirmer mot de passe
+                _buildLabel('CONFIRMER LE MOT DE PASSE'),
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
+                  style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      color: AppColors.onSurface,
+                      fontSize: 14),
                   decoration: InputDecoration(
-                    labelText: 'Confirmer le mot de passe',
                     hintText: '••••••••',
-                    prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscureConfirmPassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
+                        color: AppColors.rosyTaupe,
+                        size: 20,
                       ),
-                      onPressed: () {
-                        setState(() => _obscureConfirmPassword =
-                        !_obscureConfirmPassword);
-                      },
+                      onPressed: () => setState(() =>
+                      _obscureConfirmPassword = !_obscureConfirmPassword),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez confirmer votre mot de passe';
-                    }
-                    if (value != _passwordController.text) {
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Champ obligatoire';
+                    if (v != _passwordController.text)
                       return 'Les mots de passe ne correspondent pas';
-                    }
                     return null;
                   },
                 ),
+
                 const SizedBox(height: 32),
 
                 // Bouton inscription
@@ -295,34 +384,64 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     height: 20,
                     width: 20,
                     child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
+                        color: Colors.white, strokeWidth: 2),
                   )
                       : const Text('Créer mon compte'),
                 ),
+
                 const SizedBox(height: 16),
 
-                // Lien vers connexion
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Déjà un compte ? ',
-                      style: TextStyle(color: AppColors.onSurfaceVariant),
-                    ),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Text(
-                        'Se connecter',
+                // Lien connexion
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Déjà un compte ? ',
                         style: TextStyle(
-                          color: AppColors.mauveShadow,
-                          fontWeight: FontWeight.w600,
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 14,
+                          color: AppColors.onSurfaceVariant,
                         ),
                       ),
-                    ),
-                  ],
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Text(
+                          'Se connecter',
+                          style: TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.link,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+
+                const SizedBox(height: 12),
+
+                // Continuer sans compte
+                Center(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const MainScreen()),
+                    ),
+                    child: Text(
+                      'Continuer sans compte',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 13,
+                        color: AppColors.link,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 32),
               ],
             ),

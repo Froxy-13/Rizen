@@ -18,12 +18,27 @@ class _HomeScreenState extends State<HomeScreen> {
   final _searchController = TextEditingController();
 
   List<Annonce> _annonces = [];
-  List<Map<String, dynamic>> _categories = [];
+  List<Map<String, dynamic>> _topVendeurs = [];
   Set<int> _favorisIds = {};
   Map<int, double> _prixNegocies = {};
-  int? _categorieSelectionnee;
   bool _loading = true;
   String _recherche = '';
+
+  // ── Contenu éditorial statique (pas de backend pour l'instant) ──
+  static const List<Map<String, String>> _conseils = [
+    {
+      'tag': 'GUIDE VENDEUR',
+      'titre': 'Comment bien photographier ses articles',
+      'image':
+      'https://images.unsplash.com/photo-1492724441997-5dc865305da7?q=80&w=1000',
+    },
+    {
+      'tag': 'TENDANCE',
+      'titre': 'Les tendances de la mode circulaire au Sénégal',
+      'image':
+      'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=1000',
+    },
+  ];
 
   @override
   void initState() {
@@ -34,10 +49,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _charger() async {
     setState(() => _loading = true);
     try {
-      final cats = await _service.getCategories();
-      final annonces = await _service.getAnnonces(
-        categorieId: _categorieSelectionnee,
-      );
+      final annonces = await _service.getAnnonces();
+      final topVendeurs = await _service.getTopVendeurs();
       final userId = Supabase.instance.client.auth.currentUser?.id;
       final favoris = userId != null
           ? await _service.getFavorisIds(userId)
@@ -47,8 +60,8 @@ class _HomeScreenState extends State<HomeScreen> {
           : <int, double>{};
 
       setState(() {
-        _categories = cats;
         _annonces = annonces;
+        _topVendeurs = topVendeurs;
         _favorisIds = favoris;
         _prixNegocies = prixNegocies;
         _loading = false;
@@ -109,61 +122,64 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: RefreshIndicator(
-          color: AppColors.dustyRose,
+          color: AppColors.primary,
           onRefresh: _charger,
           child: CustomScrollView(
             slivers: [
-              // ── AppBar ──────────────────────────────────
+              // ── Header ──────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.containerMargin,
+                    AppSpacing.stackMd,
+                    AppSpacing.containerMargin,
+                    0,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Rizen',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.mauveShadow,
-                          letterSpacing: -0.56,
+                      Text('Rizen', style: AppTextStyles.displayMd),
+                      const SizedBox(height: AppSpacing.stackMd),
+
+                      // Search bar — blanc pur, sans bordure, ombre douce
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                          boxShadow: AppShadows.card,
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _searchController,
-                        onChanged: (v) => setState(() => _recherche = v),
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          color: AppColors.onSurface,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Rechercher une annonce...',
-                          hintStyle:
-                          TextStyle(color: AppColors.rosyTaupe),
-                          prefixIcon: Icon(Icons.search,
-                              color: AppColors.rosyTaupe),
-                          filled: true,
-                          fillColor: AppColors.white,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide:
-                            BorderSide(color: AppColors.paleOak),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide:
-                            BorderSide(color: AppColors.paleOak),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide:
-                            BorderSide(color: AppColors.dustyRose),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (v) => setState(() => _recherche = v),
+                          style: AppTextStyles.bodyMd,
+                          decoration: InputDecoration(
+                            hintText: 'Rechercher une annonce...',
+                            hintStyle: AppTextStyles.bodyMd.copyWith(
+                              color: AppColors.rosyTaupe,
+                            ),
+                            prefixIcon: const Icon(Icons.search,
+                                color: AppColors.rosyTaupe),
+                            filled: true,
+                            fillColor: AppColors.surface,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius:
+                              BorderRadius.circular(AppRadius.lg),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius:
+                              BorderRadius.circular(AppRadius.lg),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius:
+                              BorderRadius.circular(AppRadius.lg),
+                              borderSide: BorderSide.none,
+                            ),
                           ),
                         ),
                       ),
@@ -172,36 +188,37 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // ── Chips catégories ─────────────────────────
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 52,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 8,
+              // ── Top Vendeurs ──────────────────────────────
+              if (!_loading && _topVendeurs.isNotEmpty) ...[
+                SliverToBoxAdapter(
+                  child: _buildSectionHeader('Top Vendeurs'),
+                ),
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 96,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.containerMargin,
+                      ),
+                      itemCount: _topVendeurs.length,
+                      itemBuilder: (context, index) =>
+                          _buildVendeurItem(_topVendeurs[index]),
                     ),
-                    itemCount: _categories.length + 1,
-                    separatorBuilder: (_, __) =>
-                    const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return _buildChip('Tout', null);
-                      }
-                      final cat = _categories[index - 1];
-                      return _buildChip(cat['nom'], cat['id']);
-                    },
                   ),
                 ),
+              ],
+
+              // ── Annonces récentes ─────────────────────────
+              SliverToBoxAdapter(
+                child: _buildSectionHeader('Annonces récentes'),
               ),
 
-              // ── Grille annonces ──────────────────────────
               _loading
                   ? const SliverFillRemaining(
                 child: Center(
                   child: CircularProgressIndicator(
-                    color: AppColors.dustyRose,
+                    color: AppColors.primary,
                   ),
                 ),
               )
@@ -211,14 +228,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.inbox_outlined,
-                          size: 48,
-                          color: AppColors.paleOak),
-                      const SizedBox(height: 12),
+                      const Icon(Icons.inbox_outlined,
+                          size: 48, color: AppColors.paleOak),
+                      const SizedBox(height: AppSpacing.stackSm),
                       Text(
                         'Aucune annonce trouvée',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
+                        style: AppTextStyles.bodyMd.copyWith(
                           color: AppColors.rosyTaupe,
                         ),
                       ),
@@ -228,13 +243,17 @@ class _HomeScreenState extends State<HomeScreen> {
               )
                   : SliverPadding(
                 padding: const EdgeInsets.fromLTRB(
-                    20, 8, 20, 100),
+                  AppSpacing.containerMargin,
+                  AppSpacing.stackSm,
+                  AppSpacing.containerMargin,
+                  8,
+                ),
                 sliver: SliverGrid(
                   gridDelegate:
                   const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
+                    crossAxisSpacing: AppSpacing.gutter,
+                    mainAxisSpacing: AppSpacing.gutter,
                     childAspectRatio: 0.68,
                   ),
                   delegate: SliverChildBuilderDelegate(
@@ -244,6 +263,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
+
+              // ── Conseils & Inspiration ────────────────────
+              if (!_loading)
+                SliverToBoxAdapter(
+                  child: Column(
+                    children: [
+                      _buildSectionHeader('Conseils & Inspiration'),
+                      ..._conseils.map((c) => _buildInspirationCard(
+                        titre: c['titre']!,
+                        tag: c['tag']!,
+                        imageUrl: c['image']!,
+                      )),
+                      const SizedBox(height: 100),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
@@ -251,35 +286,70 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildChip(String label, int? categorieId) {
-    final selected = _categorieSelectionnee == categorieId;
-    return GestureDetector(
-      onTap: () {
-        setState(() => _categorieSelectionnee = categorieId);
-        _charger();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding:
-        const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected
-              ? AppColors.mauveShadow
-              : AppColors.softBlush,
-          borderRadius: BorderRadius.circular(9999),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: selected
-                ? AppColors.white
-                : AppColors.mauveShadow,
-            letterSpacing: 0.04,
+  // ── Header de section (titre + éventuel "TOUT VOIR") ──────
+  Widget _buildSectionHeader(String titre, {String? actionText}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.containerMargin,
+        AppSpacing.stackLg,
+        AppSpacing.containerMargin,
+        AppSpacing.stackSm,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(titre, style: AppTextStyles.headlineSm),
+          if (actionText != null)
+            Text(
+              actionText,
+              style: AppTextStyles.labelCaps.copyWith(
+                color: AppColors.primary,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ── Item vendeur (avatar + nom) ────────────────────────────
+  Widget _buildVendeurItem(Map<String, dynamic> vendeur) {
+    final photo = vendeur['photo'] as String?;
+    final prenom = vendeur['prenom'] as String? ?? 'Vendeur';
+
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSpacing.containerMargin),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.primary.withOpacity(0.4),
+                width: 1.5,
+              ),
+            ),
+            child: CircleAvatar(
+              radius: 28,
+              backgroundColor: AppColors.softBlush,
+              backgroundImage: photo != null ? NetworkImage(photo) : null,
+              child: photo == null
+                  ? Icon(Icons.person_outline,
+                  color: AppColors.primary, size: 22)
+                  : null,
+            ),
           ),
-        ),
+          const SizedBox(height: 6),
+          Text(
+            prenom,
+            style: AppTextStyles.bodySm.copyWith(
+              fontWeight: FontWeight.w500,
+              color: AppColors.navy,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
@@ -302,17 +372,11 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
       child: Container(
+        // Design sans bordure — hiérarchie par ombre douce uniquement
         decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.paleOak),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF744253).withOpacity(0.08),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.card,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -323,7 +387,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   ClipRRect(
                     borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
+                      top: Radius.circular(AppRadius.lg),
                     ),
                     child: imageUrl != null
                         ? CachedNetworkImage(
@@ -332,14 +396,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       fit: BoxFit.cover,
                       placeholder: (_, __) => Container(
                         color: AppColors.softBlush,
-                        child: Center(
+                        child: const Center(
                           child: Icon(Icons.image_outlined,
                               color: AppColors.paleOak),
                         ),
                       ),
                       errorWidget: (_, __, ___) => Container(
                         color: AppColors.softBlush,
-                        child: Center(
+                        child: const Center(
                           child: Icon(
                               Icons.broken_image_outlined,
                               color: AppColors.paleOak),
@@ -348,10 +412,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     )
                         : Container(
                       color: AppColors.softBlush,
-                      child: Center(
+                      child: const Center(
                         child: Icon(Icons.image_outlined,
-                            color: AppColors.paleOak,
-                            size: 32),
+                            color: AppColors.paleOak, size: 32),
                       ),
                     ),
                   ),
@@ -364,8 +427,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color:
-                          AppColors.white.withOpacity(0.9),
+                          color: AppColors.white.withOpacity(0.9),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -373,7 +435,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ? Icons.favorite
                               : Icons.favorite_border,
                           size: 18,
-                          color: AppColors.dustyRose,
+                          color: AppColors.primary,
                         ),
                       ),
                     ),
@@ -387,13 +449,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.mauveShadow,
-                          borderRadius: BorderRadius.circular(8),
+                          color: AppColors.navy,
+                          borderRadius:
+                          BorderRadius.circular(AppRadius.sm),
                         ),
-                        child: Text(
+                        child: const Text(
                           'Prix négocié',
-                          style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -407,18 +470,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Infos
             Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(AppSpacing.cardPadding * 0.6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     annonce.titre,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.onSurface,
-                    ),
+                    style: AppTextStyles.titleMd.copyWith(fontSize: 13),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -428,30 +486,28 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (aPrixNegocie) ...[
                     Text(
                       '${annonce.prixActuel.toStringAsFixed(0)} FCFA',
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
+                      style: AppTextStyles.bodySm.copyWith(
                         fontSize: 11,
-                        color: AppColors.rosyTaupe,
                         decoration: TextDecoration.lineThrough,
                       ),
                     ),
                     Text(
                       '${prixNegorie!.toStringAsFixed(0)} FCFA',
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
+                      style: const TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.mauveShadow,
+                        color: AppColors.navy,
                       ),
                     ),
                   ] else
                     Text(
                       '${annonce.prixActuel.toStringAsFixed(0)} FCFA',
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
+                      style: const TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.mauveShadow,
+                        color: AppColors.navy,
                       ),
                     ),
 
@@ -459,17 +515,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.location_on_outlined,
-                            size: 12,
-                            color: AppColors.rosyTaupe),
+                        const Icon(Icons.location_on_outlined,
+                            size: 12, color: AppColors.rosyTaupe),
                         const SizedBox(width: 2),
                         Expanded(
                           child: Text(
                             annonce.ville!,
-                            style: TextStyle(
-                              fontFamily: 'PlusJakartaSans',
+                            style: AppTextStyles.bodySm.copyWith(
                               fontSize: 11,
-                              color: AppColors.rosyTaupe,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -482,6 +535,58 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ── Bannière conseil / inspiration (contenu statique) ─────
+  Widget _buildInspirationCard({
+    required String titre,
+    required String tag,
+    required String imageUrl,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.containerMargin,
+        vertical: AppSpacing.stackSm,
+      ),
+      height: 180,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        image: DecorationImage(
+          image: NetworkImage(imageUrl),
+          fit: BoxFit.cover,
+          colorFilter: ColorFilter.mode(
+            AppColors.navy.withOpacity(0.35),
+            BlendMode.darken,
+          ),
+        ),
+        boxShadow: AppShadows.card,
+      ),
+      padding: const EdgeInsets.all(AppSpacing.stackLg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Text(
+            tag,
+            style: AppTextStyles.labelCaps.copyWith(
+              color: Colors.white.withOpacity(0.85),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            titre,
+            style: const TextStyle(
+              fontFamily: AppTextStyles.fontFamily,
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              height: 1.3,
+            ),
+          ),
+        ],
       ),
     );
   }

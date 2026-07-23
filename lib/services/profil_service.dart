@@ -33,19 +33,10 @@ class ProfilService {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return null;
 
-    final annonces = await _client
-        .from('annonces')
-        .select('id')
-        .eq('utilisateur_id', userId);
-
-    if ((annonces as List).isEmpty) return null;
-
-    final ids = annonces.map((a) => a['id']).toList();
-
     final data = await _client
         .from('avis')
         .select('note')
-        .inFilter('annonce_id', ids);
+        .eq('vendeur_id', userId);
 
     if ((data as List).isEmpty) return null;
     final total = data.fold<double>(

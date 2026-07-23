@@ -3,7 +3,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/message_service.dart';
 import '../../theme/app_theme.dart';
 import '../../services/negociation_service.dart';
+import '../../services/transaction_service.dart';
 import '../negociations/negociation_screen.dart';
+import '../transaction/paiement_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final int conversationId;
@@ -25,6 +27,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _scrollController = ScrollController();
   final _userId = Supabase.instance.client.auth.currentUser?.id;
   final Map<int, String> _negociationsTraitees = {};
+  final Map<int, String> _transactionsStatuts = {};
 
   late final Stream<List<Map<String, dynamic>>> _messagesStream;
 
@@ -33,6 +36,7 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     _messagesStream = _service.streamMessages(widget.conversationId);
     _chargerStatutsNegociations();
+    _chargerStatutsTransactions();
   }
 
   Future<void> _chargerStatutsNegociations() async {
@@ -40,6 +44,20 @@ class _ChatScreenState extends State<ChatScreen> {
       final statuts = await NegociationService()
           .getStatutsNegociations(widget.conversationId);
       if (mounted) setState(() => _negociationsTraitees.addAll(statuts));
+    } catch (_) {}
+  }
+
+  Future<void> _chargerStatutsTransactions() async {
+    try {
+      final userId = _userId;
+      if (userId == null) return;
+      final transactions =
+      await TransactionService().getMesTransactions(userId);
+      final Map<int, String> statuts = {};
+      for (final t in transactions) {
+        statuts[t['id'] as int] = t['statut'] as String;
+      }
+      if (mounted) setState(() => _transactionsStatuts.addAll(statuts));
     } catch (_) {}
   }
 
@@ -109,9 +127,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   );
                 }
 
-                final messages = List<Map<String, dynamic>>.from(snapshot.data!)
-                  ..sort((a, b) => DateTime.parse(a['date_envoi'])
-                      .compareTo(DateTime.parse(b['date_envoi'])));
+                final messages =
+                List<Map<String, dynamic>>.from(snapshot.data!)
+                  ..sort((a, b) =>
+                      DateTime.parse(a['date_envoi'])
+                          .compareTo(DateTime.parse(b['date_envoi'])));
 
                 if (messages.isEmpty) {
                   return Center(
@@ -203,17 +223,22 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildBubble(Map<String, dynamic> msg) {
     final isMe = msg['sender_id'] == _userId;
-    final isNegociation = msg['type'] == 'negociation';
+    final type = msg['type'] as String? ?? 'texte';
 
-    if (isNegociation && !isMe) {
+    if (type == 'negociation' && !isMe) {
       return _buildBulleNegociation(msg);
+    }
+
+    if (type == 'transaction') {
+      return _buildBulleTransaction(msg, isMe);
     }
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding:
+        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.7),
         decoration: BoxDecoration(
@@ -238,6 +263,162 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Widget _buildBulleTransaction(Map<String, dynamic> msg, bool isMe) {
+    final transactionId = msg['transaction_id'] as int?;
+    final statut = transactionId != null
+        ? _transactionsStatuts[transactionId]
+        : null;
+    final estVendeur = !isMe;
+    final estCompletee = statut == 'completee';
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.82),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: estCompletee
+                ? Colors.green.shade300
+                : const Color(0xFF1E90FF).withOpacity(0.5),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF744253).withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: estCompletee
+                    ? Colors.green.shade50
+                    : const Color(0xFF1E90FF).withOpacity(0.08),
+                borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(14)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    estCompletee
+                        ? Icons.check_circle_outline
+                        : Icons.shopping_bag_outlined,
+                    size: 16,
+                    color: estCompletee
+                        ? Colors.green.shade600
+                        : const Color(0xFF1E90FF),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    estCompletee
+                        ? 'Transaction terminée'
+                        : 'Commande en cours',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: estCompletee
+                          ? Colors.green.shade600
+                          : const Color(0xFF1E90FF),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Contenu
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+              child: Text(
+                msg['contenu'],
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 13,
+                  color: AppColors.onSurface,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+            Divider(color: AppColors.paleOak, height: 1),
+
+            // Action
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: estCompletee
+                  ? Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Terminée',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.green.shade700,
+                    ),
+                  ),
+                ),
+              )
+                  : GestureDetector(
+                onTap: transactionId == null
+                    ? null
+                    : () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SuiviTransactionScreen(
+                      transactionId: transactionId,
+                      annonceId: 0,
+                      estLiquide: statut == 'en_livraison' &&
+                          msg['contenu']
+                              .contains('espèces'),
+                    ),
+                  ),
+                ).then((_) => _chargerStatutsTransactions()),
+                child: Container(
+                  width: double.infinity,
+                  padding:
+                  const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.mauveShadow,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Voir le suivi',
+                      style: const TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildBulleNegociation(Map<String, dynamic> msg) {
     final negociationId = msg['negociation_id'] as int?;
     final dejaTraite = negociationId != null &&
@@ -256,7 +437,8 @@ class _ChatScreenState extends State<ChatScreen> {
           color: AppColors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: dejaTraite ? AppColors.paleOak : AppColors.dustyRose,
+            color:
+            dejaTraite ? AppColors.paleOak : AppColors.dustyRose,
             width: 1.5,
           ),
           boxShadow: [
@@ -271,9 +453,12 @@ class _ChatScreenState extends State<ChatScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: dejaTraite ? AppColors.paleOak : AppColors.softBlush,
+                color: dejaTraite
+                    ? AppColors.paleOak
+                    : AppColors.softBlush,
                 borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(14)),
               ),
@@ -369,7 +554,8 @@ class _ChatScreenState extends State<ChatScreen> {
                           ? null
                           : () => _refuser(negociationId),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 10),
                         decoration: BoxDecoration(
                           color: AppColors.softBlush,
                           borderRadius: BorderRadius.circular(12),
@@ -396,7 +582,8 @@ class _ChatScreenState extends State<ChatScreen> {
                           ? null
                           : () => _contreProposer(negociationId),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 10),
                         decoration: BoxDecoration(
                           color: AppColors.softBlush,
                           borderRadius: BorderRadius.circular(12),
@@ -422,7 +609,8 @@ class _ChatScreenState extends State<ChatScreen> {
                           ? null
                           : () => _accepter(negociationId),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 10),
                         decoration: BoxDecoration(
                           color: AppColors.mauveShadow,
                           borderRadius: BorderRadius.circular(12),
@@ -501,10 +689,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _contreProposer(int negociationId) async {
-    final neg = await NegociationService().getNegociation(negociationId);
+    final neg =
+    await NegociationService().getNegociation(negociationId);
     if (neg == null || !mounted) return;
 
-    // Marque l'ancienne négociation comme refusée silencieusement
     await NegociationService().refuserNegociation(
       negociationId: negociationId,
       userId: _userId!,
@@ -512,7 +700,8 @@ class _ChatScreenState extends State<ChatScreen> {
       silencieux: true,
     );
 
-    setState(() => _negociationsTraitees[negociationId] = 'refusee');
+    setState(
+            () => _negociationsTraitees[negociationId] = 'refusee');
 
     showModalBottomSheet(
       context: context,

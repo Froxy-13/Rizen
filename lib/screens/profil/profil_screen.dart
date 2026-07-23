@@ -7,7 +7,9 @@ import '../../services/annonce_service.dart';
 import '../../theme/app_theme.dart';
 import '../home/detail_annonce_screen.dart';
 import '../auth/login_screen.dart';
+import '../favoris/favoris_screen.dart';
 import 'mes_annonces_screen.dart';
+import 'mes_transactions_screen.dart';
 
 class ProfilScreen extends StatefulWidget {
   const ProfilScreen({super.key});
@@ -469,6 +471,19 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   child: Column(
                     children: [
                       _buildMenuItem(
+                        icon: Icons.favorite_border,
+                        label: 'Mes favoris',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const FavorisScreen()),
+                        ),
+                      ),
+                      Divider(
+                          color: AppColors.paleOak,
+                          height: 1,
+                          indent: 56),
+                      _buildMenuItem(
                         icon: Icons.settings_outlined,
                         label: 'Paramètres',
                         onTap: () {},
@@ -480,7 +495,10 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       _buildMenuItem(
                         icon: Icons.history,
                         label: "Historique d'achat",
-                        onTap: () {},
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const MesTransactionsScreen()),
+                        ),
                       ),
                       Divider(
                           color: AppColors.paleOak,

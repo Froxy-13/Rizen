@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import 'register_screen.dart';
 import '../main_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _authService = AuthService();
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   bool _obscurePassword = true;
 
   @override
@@ -29,9 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _connexion() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
-
     try {
       await _authService.connexion(
         email: _emailController.text.trim(),
@@ -44,7 +45,6 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } on AuthException catch (e) {
-      print('AUTH EXCEPTION: ${e.message} | STATUS: ${e.statusCode}');
       if (mounted) {
         String message = 'Une erreur est survenue, veuillez réessayer';
         if (e.message.contains('Invalid login credentials')) {
@@ -66,13 +66,60 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _connexionGoogle() async {
+    setState(() => _isGoogleLoading = true);
+    try {
+      const webClientId =
+          '993089007993-1cs8lggo5ir2un1nacan3270hhqcnil9.apps.googleusercontent.com';
+      const androidClientId =
+          '993089007993-1n4qb344tiv5ktnod3c8n5nhm6mgvqoa.apps.googleusercontent.com';
+
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        clientId: androidClientId,
+        serverClientId: webClientId,
+      );
+
+      final googleUser = await googleSignIn.signIn();
+      if (googleUser == null) return;
+
+      final googleAuth = await googleUser.authentication;
+      final accessToken = googleAuth.accessToken;
+      final idToken = googleAuth.idToken;
+
+      if (accessToken == null || idToken == null) {
+        throw Exception('Tokens Google manquants');
+      }
+
+      await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: accessToken,
+      );
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur Google : $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Form(
             key: _formKey,
             child: Column(
@@ -80,50 +127,57 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const SizedBox(height: 60),
 
-                // Logo / Titre
+                // Logo
                 Center(
-                  child: Text(
-                    'Rizen',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 36,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.mauveShadow,
-                      letterSpacing: -0.02,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Center(
-                  child: Text(
-                    'Bienvenue sur Rizen',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.onSurfaceVariant,
-                    ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Rizen',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 36,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Bienvenue sur Rizen',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 14,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
                 const SizedBox(height: 48),
 
+                // Label EMAIL
                 Text(
-                  'Connexion',
+                  'EMAIL',
                   style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.onSurface,
-                    letterSpacing: -0.01,
+                    letterSpacing: 0.8,
                   ),
                 ),
-                const SizedBox(height: 24),
-
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    color: AppColors.onSurface,
+                    fontSize: 14,
+                  ),
                   decoration: const InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'exemple@email.com',
-                    prefixIcon: Icon(Icons.mail_outline),
+                    hintText: 'votre@email.com',
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -135,24 +189,41 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
 
+                const SizedBox(height: 20),
+
+                // Label MOT DE PASSE
+                Text(
+                  'MOT DE PASSE',
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.onSurface,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    color: AppColors.onSurface,
+                    fontSize: 14,
+                  ),
                   decoration: InputDecoration(
-                    labelText: 'Mot de passe',
                     hintText: '••••••••',
-                    prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
+                        color: AppColors.rosyTaupe,
+                        size: 20,
                       ),
-                      onPressed: () {
-                        setState(() => _obscurePassword = !_obscurePassword);
-                      },
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
                   validator: (value) {
@@ -165,8 +236,33 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 32),
 
+                const SizedBox(height: 10),
+
+                // Mot de passe oublié
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordScreen()),
+                    ),
+                    child: Text(
+                      'Mot de passe oublié ?',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+
+                // Bouton connexion
                 ElevatedButton(
                   onPressed: _isLoading ? null : _connexion,
                   child: _isLoading
@@ -174,40 +270,122 @@ class _LoginScreenState extends State<LoginScreen> {
                     height: 20,
                     width: 20,
                     child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
+                        color: Colors.white, strokeWidth: 2),
                   )
                       : const Text('Se connecter'),
                 ),
-                const SizedBox(height: 16),
 
+                const SizedBox(height: 20),
+
+                // Séparateur
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Pas encore de compte ? ',
-                      style: TextStyle(color: AppColors.onSurfaceVariant),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const RegisterScreen(),
-                          ),
-                        );
-                      },
+                    Expanded(child: Divider(color: AppColors.paleOak)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
-                        'S\'inscrire',
+                        'ou',
                         style: TextStyle(
-                          color: AppColors.mauveShadow,
-                          fontWeight: FontWeight.w600,
+                          fontFamily: 'PlusJakartaSans',
+                          color: AppColors.rosyTaupe,
+                          fontSize: 13,
                         ),
                       ),
                     ),
+                    Expanded(child: Divider(color: AppColors.paleOak)),
                   ],
                 ),
+
+                const SizedBox(height: 20),
+
+                // Bouton Google
+                OutlinedButton(
+                  onPressed: _isGoogleLoading ? null : _connexionGoogle,
+                  child: _isGoogleLoading
+                      ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                      : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.network(
+                        'https://www.google.com/favicon.ico',
+                        width: 20,
+                        height: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Continuer avec Google',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: AppColors.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Lien inscription
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Pas encore de compte ? ',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 14,
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const RegisterScreen()),
+                        ),
+                        child: Text(
+                          'S\'inscrire',
+                          style: TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.link,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Continuer sans compte
+                Center(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MainScreen()),
+                    ),
+                    child: Text(
+                      'Continuer sans compte',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 13,
+                        color: AppColors.link,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 32),
               ],
             ),
