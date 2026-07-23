@@ -59,10 +59,67 @@ class AnnonceService {
   Future<Map<String, dynamic>> getAnnonceById(int id) async {
     final data = await _client
         .from('annonces')
-        .select('*, images_annonce(url_image, ordre), profils(nom, prenom, photo, telephone)')
+        .select('*, images_annonce(id, url_image, ordre), profils(nom, prenom, photo), categories(nom)')
         .eq('id', id)
         .single();
     return data;
+  }
+
+  /// Met à jour les champs modifiables d'une annonce.
+  /// Ne touche pas à prix_initial, seulement prix_actuel.
+  Future<void> modifierAnnonce({
+    required int annonceId,
+    required String titre,
+    required String description,
+    required double prix,
+    required int categorieId,
+    required String ville,
+    required String quartier,
+  }) async {
+    await _client.from('annonces').update({
+      'titre': titre,
+      'description': description,
+      'prix_actuel': prix,
+      'categorie_id': categorieId,
+      'ville': ville,
+      'quartier': quartier,
+    }).eq('id', annonceId);
+  }
+
+  Future<void> ajouterImageAnnonce({
+    required int annonceId,
+    required String urlImage,
+    required int ordre,
+  }) async {
+    await _client.from('images_annonce').insert({
+      'annonce_id': annonceId,
+      'url_image': urlImage,
+      'ordre': ordre,
+    });
+  }
+
+  Future<void> supprimerImageAnnonce(int imageId) async {
+    await _client.from('images_annonce').delete().eq('id', imageId);
+  }
+
+  /// Note moyenne + nombre d'avis reçus par un vendeur (avis où
+  /// emetteur = 'acheteur', donc des avis laissés SUR ce vendeur).
+  /// Retourne null si le vendeur n'a encore aucun avis.
+  Future<Map<String, dynamic>?> getNoteVendeur(String vendeurId) async {
+    final data = await _client
+        .from('avis')
+        .select('note')
+        .eq('vendeur_id', vendeurId)
+        .eq('emetteur', 'acheteur');
+
+    if (data.isEmpty) return null;
+
+    final notes = (data as List).map((e) => e['note'] as int).toList();
+    final moyenne = notes.reduce((a, b) => a + b) / notes.length;
+    return {
+      'note_moyenne': moyenne,
+      'nombre_avis': notes.length,
+    };
   }
 
   Future<void> signalerAnnonce({

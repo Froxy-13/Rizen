@@ -10,11 +10,13 @@ import '../transaction/paiement_screen.dart';
 class ChatScreen extends StatefulWidget {
   final int conversationId;
   final String annonceTitre;
+  final String? annonceImageUrl;
 
   const ChatScreen({
     super.key,
     required this.conversationId,
     required this.annonceTitre,
+    this.annonceImageUrl,
   });
 
   @override
@@ -28,6 +30,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _userId = Supabase.instance.client.auth.currentUser?.id;
   final Map<int, String> _negociationsTraitees = {};
   final Map<int, String> _transactionsStatuts = {};
+  Map<String, dynamic>? _autreParticipant;
 
   late final Stream<List<Map<String, dynamic>>> _messagesStream;
 
@@ -37,6 +40,30 @@ class _ChatScreenState extends State<ChatScreen> {
     _messagesStream = _service.streamMessages(widget.conversationId);
     _chargerStatutsNegociations();
     _chargerStatutsTransactions();
+    _chargerParticipant();
+    _marquerCommeLue();
+  }
+
+  Future<void> _marquerCommeLue() async {
+    final userId = _userId;
+    if (userId == null) return;
+    try {
+      await _service.marquerConversationLue(widget.conversationId, userId);
+    } catch (e) {
+      debugPrint('Erreur marquerConversationLue: $e');
+    }
+  }
+
+  Future<void> _chargerParticipant() async {
+    final userId = _userId;
+    if (userId == null) return;
+    try {
+      final profil =
+      await _service.getAutreParticipant(widget.conversationId, userId);
+      if (mounted && profil != null) {
+        setState(() => _autreParticipant = Map<String, dynamic>.from(profil));
+      }
+    } catch (_) {}
   }
 
   Future<void> _chargerStatutsNegociations() async {
@@ -93,26 +120,72 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final photo = _autreParticipant?['photo'] as String?;
+    final nomParticipant = _autreParticipant != null
+        ? '${_autreParticipant!['prenom'] ?? ''} ${_autreParticipant!['nom'] ?? ''}'
+        .trim()
+        : widget.annonceTitre;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.white,
+        backgroundColor: AppColors.background,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.onSurface),
+          icon: const Icon(Icons.arrow_back, color: AppColors.navy),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          widget.annonceTitre,
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontWeight: FontWeight.w600,
-            fontSize: 15,
-            color: AppColors.onSurface,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: AppColors.softBlush,
+              backgroundImage: photo != null ? NetworkImage(photo) : null,
+              child: photo == null
+                  ? const Icon(Icons.person_outline,
+                  color: AppColors.primary, size: 18)
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    nomParticipant,
+                    style: AppTextStyles.titleMd.copyWith(fontSize: 15),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    widget.annonceTitre,
+                    style: AppTextStyles.bodySm.copyWith(fontSize: 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
+        actions: [
+          if (widget.annonceImageUrl != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                child: Image.network(
+                  widget.annonceImageUrl!,
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -123,7 +196,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (!snapshot.hasData) {
                   return const Center(
                     child: CircularProgressIndicator(
-                        color: AppColors.dustyRose),
+                        color: AppColors.primary),
                   );
                 }
 
@@ -137,10 +210,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   return Center(
                     child: Text(
                       'Envoyez le premier message',
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
+                      style: AppTextStyles.bodyMd.copyWith(
                         color: AppColors.rosyTaupe,
-                        fontSize: 14,
                       ),
                     ),
                   );
@@ -166,50 +237,69 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
 
           Container(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             decoration: BoxDecoration(
-              color: AppColors.white,
+              color: AppColors.background,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF744253).withOpacity(0.08),
-                  blurRadius: 8,
+                  color: AppColors.navy.withOpacity(0.06),
+                  blurRadius: 12,
                   offset: const Offset(0, -2),
                 ),
               ],
             ),
             child: Row(
               children: [
+                Container(
+                  height: 44,
+                  width: 44,
+                  decoration: const BoxDecoration(
+                    color: AppColors.softBlush,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.add, color: AppColors.navy),
+                ),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        color: AppColors.onSurface),
-                    decoration: InputDecoration(
-                      hintText: 'Votre message...',
-                      hintStyle: TextStyle(color: AppColors.rosyTaupe),
-                      filled: true,
-                      fillColor: AppColors.softBlush,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
+                  child: Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                      boxShadow: AppShadows.card,
                     ),
-                    onSubmitted: (_) => _envoyer(),
+                    child: TextField(
+                      controller: _messageController,
+                      style: AppTextStyles.bodyMd,
+                      decoration: InputDecoration(
+                        hintText: 'Écrivez votre message...',
+                        hintStyle: AppTextStyles.bodyMd.copyWith(
+                          color: AppColors.rosyTaupe,
+                        ),
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius:
+                          BorderRadius.circular(AppRadius.full),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      onSubmitted: (_) => _envoyer(),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 GestureDetector(
                   onTap: _envoyer,
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: const BoxDecoration(
-                      color: AppColors.dustyRose,
+                      color: AppColors.primary,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.send,
+                    child: const Icon(Icons.send_rounded,
                         color: Colors.white, size: 20),
                   ),
                 ),
@@ -235,32 +325,54 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding:
-        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.7),
-        decoration: BoxDecoration(
-          color: isMe ? AppColors.mauveShadow : AppColors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isMe ? 16 : 4),
-            bottomRight: Radius.circular(isMe ? 4 : 16),
+      child: Column(
+        crossAxisAlignment:
+        isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 2),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.72),
+            decoration: BoxDecoration(
+              color: isMe ? AppColors.navy : AppColors.surface,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(18),
+                topRight: const Radius.circular(18),
+                bottomLeft: Radius.circular(isMe ? 18 : 4),
+                bottomRight: Radius.circular(isMe ? 4 : 18),
+              ),
+              boxShadow: isMe ? null : AppShadows.card,
+            ),
+            child: Text(
+              msg['contenu'],
+              style: TextStyle(
+                fontFamily: AppTextStyles.fontFamily,
+                fontSize: 14,
+                color: isMe ? Colors.white : AppColors.onSurface,
+              ),
+            ),
           ),
-          border: isMe ? null : Border.all(color: AppColors.paleOak),
-        ),
-        child: Text(
-          msg['contenu'],
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 14,
-            color: isMe ? Colors.white : AppColors.onSurface,
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 10, left: 4, right: 4),
+            child: Text(
+              isMe
+                  ? '${_formatHeureMessage(msg['date_envoi'])}${msg['lu'] == true ? ' • Vu' : ''}'
+                  : _formatHeureMessage(msg['date_envoi']),
+              style: AppTextStyles.bodySm.copyWith(fontSize: 11),
+            ),
           ),
-        ),
+        ],
       ),
     );
+  }
+
+  String _formatHeureMessage(String? dateIso) {
+    if (dateIso == null) return '';
+    final date = DateTime.parse(dateIso);
+    return '${date.hour.toString().padLeft(2, '0')}:'
+        '${date.minute.toString().padLeft(2, '0')}';
   }
 
   Widget _buildBulleTransaction(Map<String, dynamic> msg, bool isMe) {
@@ -268,7 +380,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final statut = transactionId != null
         ? _transactionsStatuts[transactionId]
         : null;
-    final estVendeur = !isMe;
     final estCompletee = statut == 'completee';
 
     return Align(
@@ -278,26 +389,19 @@ class _ChatScreenState extends State<ChatScreen> {
         constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.82),
         decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(
             color: estCompletee
                 ? Colors.green.shade300
                 : const Color(0xFF1E90FF).withOpacity(0.5),
             width: 1.5,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF744253).withOpacity(0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: AppShadows.card,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Container(
               padding: const EdgeInsets.symmetric(
                   horizontal: 14, vertical: 10),
@@ -306,7 +410,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     ? Colors.green.shade50
                     : const Color(0xFF1E90FF).withOpacity(0.08),
                 borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(14)),
+                    top: Radius.circular(AppRadius.lg)),
               ),
               child: Row(
                 children: [
@@ -325,7 +429,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         ? 'Transaction terminée'
                         : 'Commande en cours',
                     style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
+                      fontFamily: AppTextStyles.fontFamily,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: estCompletee
@@ -336,24 +440,15 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
             ),
-
-            // Contenu
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
               child: Text(
                 msg['contenu'],
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 13,
-                  color: AppColors.onSurface,
-                ),
+                style: AppTextStyles.bodyMd.copyWith(fontSize: 13),
               ),
             ),
-
             const SizedBox(height: 10),
-            Divider(color: AppColors.paleOak, height: 1),
-
-            // Action
+            const Divider(color: AppColors.paleOak, height: 1),
             Padding(
               padding: const EdgeInsets.all(10),
               child: estCompletee
@@ -363,12 +458,12 @@ class _ChatScreenState extends State<ChatScreen> {
                       horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(AppRadius.full),
                   ),
                   child: Text(
                     'Terminée',
                     style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
+                      fontFamily: AppTextStyles.fontFamily,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: Colors.green.shade700,
@@ -396,14 +491,14 @@ class _ChatScreenState extends State<ChatScreen> {
                   padding:
                   const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: AppColors.mauveShadow,
-                    borderRadius: BorderRadius.circular(12),
+                    color: AppColors.navy,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
-                  child: Center(
+                  child: const Center(
                     child: Text(
                       'Voir le suivi',
-                      style: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
@@ -434,20 +529,14 @@ class _ChatScreenState extends State<ChatScreen> {
         constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.82),
         decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(
             color:
-            dejaTraite ? AppColors.paleOak : AppColors.dustyRose,
+            dejaTraite ? AppColors.paleOak : AppColors.primary,
             width: 1.5,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF744253).withOpacity(0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: AppShadows.card,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -457,58 +546,67 @@ class _ChatScreenState extends State<ChatScreen> {
                   horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: dejaTraite
-                    ? AppColors.paleOak
+                    ? AppColors.paleOak.withOpacity(0.3)
                     : AppColors.softBlush,
                 borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(14)),
+                    top: Radius.circular(AppRadius.lg)),
               ),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(
-                    dejaTraite
-                        ? Icons.check_circle_outline
-                        : Icons.handshake_outlined,
-                    size: 16,
-                    color: dejaTraite
-                        ? AppColors.rosyTaupe
-                        : AppColors.dustyRose,
+                  Row(
+                    children: [
+                      Icon(
+                        dejaTraite
+                            ? Icons.check_circle_outline
+                            : Icons.handshake_outlined,
+                        size: 16,
+                        color: dejaTraite
+                            ? AppColors.rosyTaupe
+                            : AppColors.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        dejaTraite
+                            ? 'Négociation traitée'
+                            : 'Nouvelle offre',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: dejaTraite
+                              ? AppColors.rosyTaupe
+                              : AppColors.primary,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    dejaTraite
-                        ? 'Négociation traitée'
-                        : 'Proposition de négociation',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: dejaTraite
-                          ? AppColors.rosyTaupe
-                          : AppColors.dustyRose,
+                  if (!dejaTraite)
+                    Text(
+                      'EN ATTENTE',
+                      style: AppTextStyles.labelCaps.copyWith(
+                        color: AppColors.primary,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
               child: Text(
                 msg['contenu'],
                 style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
+                  fontFamily: AppTextStyles.fontFamily,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: dejaTraite
                       ? AppColors.rosyTaupe
-                      : AppColors.mauveShadow,
+                      : AppColors.navy,
                 ),
               ),
             ),
-
             const SizedBox(height: 10),
-            Divider(color: AppColors.paleOak, height: 1),
-
+            const Divider(color: AppColors.paleOak, height: 1),
             dejaTraite
                 ? Padding(
               padding: const EdgeInsets.all(12),
@@ -522,7 +620,8 @@ class _ChatScreenState extends State<ChatScreen> {
                         : resultat == 'refusee'
                         ? const Color(0xFFFCE4EC)
                         : AppColors.softBlush,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius:
+                    BorderRadius.circular(AppRadius.full),
                   ),
                   child: Text(
                     resultat == 'acceptee'
@@ -531,107 +630,75 @@ class _ChatScreenState extends State<ChatScreen> {
                         ? 'Refusée'
                         : 'Contre-proposition envoyée',
                     style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
+                      fontFamily: AppTextStyles.fontFamily,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: resultat == 'acceptee'
                           ? Colors.green.shade700
                           : resultat == 'refusee'
                           ? Colors.red.shade700
-                          : AppColors.mauveShadow,
+                          : AppColors.navy,
                     ),
                   ),
                 ),
               ),
             )
-                : Padding(
-              padding: const EdgeInsets.all(10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: negociationId == null
-                          ? null
-                          : () => _refuser(negociationId),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 10),
-                        decoration: BoxDecoration(
-                          color: AppColors.softBlush,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'Refuser',
-                            style: TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.rosyTaupe,
-                            ),
-                          ),
-                        ),
+                : Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: negociationId == null
+                        ? null
+                        : () => _refuser(negociationId),
+                    child: Text(
+                      'Refuser',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Colors.red.shade600,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    flex: 2,
-                    child: GestureDetector(
-                      onTap: negociationId == null
-                          ? null
-                          : () => _contreProposer(negociationId),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 10),
-                        decoration: BoxDecoration(
-                          color: AppColors.softBlush,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'Contre-proposer',
-                            style: TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.mauveShadow,
-                            ),
-                          ),
-                        ),
+                ),
+                Container(width: 1, height: 24, color: AppColors.paleOak),
+                Expanded(
+                  child: TextButton(
+                    onPressed: negociationId == null
+                        ? null
+                        : () => _contreProposer(negociationId),
+                    child: Text(
+                      'Contre-\nproposer',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        color: AppColors.navy,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: negociationId == null
-                          ? null
-                          : () => _accepter(negociationId),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 10),
-                        decoration: BoxDecoration(
-                          color: AppColors.mauveShadow,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: const Text(
-                            'Accepter',
-                            style: TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
+                ),
+                Container(width: 1, height: 24, color: AppColors.paleOak),
+                Expanded(
+                  child: TextButton(
+                    onPressed: negociationId == null
+                        ? null
+                        : () => _accepter(negociationId),
+                    child: Text(
+                      'Accepter',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Colors.green.shade700,
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
+            const SizedBox(height: 4),
           ],
         ),
       ),

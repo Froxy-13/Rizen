@@ -81,33 +81,47 @@ class _FavorisScreenState extends State<FavorisScreen> {
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: RefreshIndicator(
-          color: AppColors.dustyRose,
+          color: AppColors.primary,
           onRefresh: _charger,
           child: CustomScrollView(
             slivers: [
-              // Titre
+              // ── Header ──────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-                  child: Text(
-                    'Mes favoris',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.mauveShadow,
-                      letterSpacing: -0.5,
-                    ),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.containerMargin,
+                    AppSpacing.stackMd,
+                    AppSpacing.containerMargin,
+                    AppSpacing.stackMd,
+                  ),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            shape: BoxShape.circle,
+                            boxShadow: AppShadows.card,
+                          ),
+                          child: const Icon(Icons.arrow_back,
+                              color: AppColors.navy, size: 18),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.stackMd),
+                      Text('Mes favoris', style: AppTextStyles.displayMd),
+                    ],
                   ),
                 ),
               ),
 
-              // Contenu
+              // ── Contenu ────────────────────────────────
               _loading
                   ? const SliverFillRemaining(
                 child: Center(
                   child: CircularProgressIndicator(
-                      color: AppColors.dustyRose),
+                      color: AppColors.primary),
                 ),
               )
                   : _favoris.isEmpty
@@ -116,15 +130,13 @@ class _FavorisScreenState extends State<FavorisScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.favorite_border,
+                      const Icon(Icons.favorite_border,
                           size: 56, color: AppColors.paleOak),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: AppSpacing.stackMd),
                       Text(
                         'Aucun favori pour l\'instant',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
+                        style: AppTextStyles.bodyMd.copyWith(
                           color: AppColors.rosyTaupe,
-                          fontSize: 14,
                         ),
                       ),
                     ],
@@ -132,11 +144,23 @@ class _FavorisScreenState extends State<FavorisScreen> {
                 ),
               )
                   : SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                sliver: SliverList(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.containerMargin,
+                  0,
+                  AppSpacing.containerMargin,
+                  40,
+                ),
+                sliver: SliverGrid(
+                  gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: AppSpacing.gutter,
+                    mainAxisSpacing: AppSpacing.stackLg,
+                    childAspectRatio: 0.68,
+                  ),
                   delegate: SliverChildBuilderDelegate(
                         (context, index) =>
-                        _buildItem(_favoris[index]),
+                        _buildCard(_favoris[index]),
                     childCount: _favoris.length,
                   ),
                 ),
@@ -148,7 +172,7 @@ class _FavorisScreenState extends State<FavorisScreen> {
     );
   }
 
-  Widget _buildItem(Annonce annonce) {
+  Widget _buildCard(Annonce annonce) {
     final imageUrl =
     annonce.images.isNotEmpty ? annonce.images.first : null;
 
@@ -163,111 +187,104 @@ class _FavorisScreenState extends State<FavorisScreen> {
         _charger(); // Recharge au retour (au cas où le favori a été retiré)
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.paleOak),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF744253).withOpacity(0.06),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.card,
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
-            ClipRRect(
-              borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(16)),
-              child: imageUrl != null
-                  ? CachedNetworkImage(
-                imageUrl: imageUrl,
-                width: 100,
-                height: 100,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
-                  width: 100,
-                  height: 100,
-                  color: AppColors.softBlush,
-                ),
-                errorWidget: (_, __, ___) => Container(
-                  width: 100,
-                  height: 100,
-                  color: AppColors.softBlush,
-                  child: Icon(Icons.broken_image_outlined,
-                      color: AppColors.paleOak),
-                ),
-              )
-                  : Container(
-                width: 100,
-                height: 100,
-                color: AppColors.softBlush,
-                child: Icon(Icons.image_outlined,
-                    color: AppColors.paleOak),
-              ),
-            ),
-
-            // Infos
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      annonce.titre,
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.onSurface,
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(AppRadius.lg)),
+                    child: SizedBox.expand(
+                      child: imageUrl != null
+                          ? CachedNetworkImage(
+                        imageUrl: imageUrl,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(
+                          color: AppColors.softBlush,
+                        ),
+                        errorWidget: (_, __, ___) => Container(
+                          color: AppColors.softBlush,
+                          child: const Icon(
+                              Icons.broken_image_outlined,
+                              color: AppColors.paleOak),
+                        ),
+                      )
+                          : Container(
+                        color: AppColors.softBlush,
+                        child: const Center(
+                          child: Icon(Icons.image_outlined,
+                              color: AppColors.paleOak),
+                        ),
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${annonce.prixActuel.toStringAsFixed(0)} FCFA',
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.mauveShadow,
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () => _retirerFavori(annonce),
+                      child: Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: const BoxDecoration(
+                          color: AppColors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.favorite,
+                            size: 18, color: AppColors.primary),
                       ),
                     ),
-                    if (annonce.ville != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.location_on_outlined,
-                              size: 12, color: AppColors.rosyTaupe),
-                          const SizedBox(width: 2),
-                          Text(
-                            annonce.ville!,
-                            style: TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 11,
-                              color: AppColors.rosyTaupe,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-
-            // Bouton retirer favori
             Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: GestureDetector(
-                onTap: () => _retirerFavori(annonce),
-                child: Icon(Icons.favorite,
-                    color: AppColors.dustyRose, size: 22),
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    annonce.titre,
+                    style: AppTextStyles.titleMd.copyWith(fontSize: 13),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${annonce.prixActuel.toStringAsFixed(0)} FCFA',
+                    style: const TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  if (annonce.ville != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_outlined,
+                            size: 12, color: AppColors.rosyTaupe),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            annonce.ville!,
+                            style: AppTextStyles.bodySm.copyWith(
+                              fontSize: 11,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
             ),
           ],

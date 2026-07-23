@@ -73,14 +73,12 @@ class _CreerAnnonceScreenState extends State<CreerAnnonceScreen> {
     setState(() => _loading = true);
 
     try {
-      // Upload images
       final urls = <String>[];
       for (final img in _images) {
         final url = await _service.uploadImage(img.path);
         urls.add(url);
       }
 
-      // Créer l'annonce
       await _service.creerAnnonce(
         titre: _titreController.text.trim(),
         description: _descController.text.trim(),
@@ -96,7 +94,6 @@ class _CreerAnnonceScreenState extends State<CreerAnnonceScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Annonce publiée avec succès')),
         );
-        // Réinitialiser le formulaire
         _formKey.currentState!.reset();
         _titreController.clear();
         _descController.clear();
@@ -107,6 +104,7 @@ class _CreerAnnonceScreenState extends State<CreerAnnonceScreen> {
           _images = [];
           _categorieId = null;
         });
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -124,123 +122,44 @@ class _CreerAnnonceScreenState extends State<CreerAnnonceScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.white,
+        backgroundColor: AppColors.background,
         elevation: 0,
+        centerTitle: true,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.onSurface),
+          icon: const Icon(Icons.close, color: AppColors.navy),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          'Nouvelle annonce',
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-            color: AppColors.onSurface,
-          ),
-        ),
+        title: Text('Vendre un article', style: AppTextStyles.titleMd),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Photos
-              _buildLabel('Photos (optionnel, max 5)'),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 100,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    // Bouton ajouter
-                    GestureDetector(
-                      onTap: _ajouterImage,
-                      child: Container(
-                        width: 100,
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.softBlush,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.paleOak),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add_photo_alternate_outlined,
-                                color: AppColors.dustyRose, size: 28),
-                            const SizedBox(height: 4),
-                            Text('Ajouter',
-                                style: TextStyle(
-                                  fontFamily: 'PlusJakartaSans',
-                                  fontSize: 11,
-                                  color: AppColors.dustyRose,
-                                )),
-                          ],
-                        ),
-                      ),
-                    ),
-                    // Images sélectionnées
-                    ..._images.asMap().entries.map((entry) {
-                      return Stack(
-                        children: [
-                          Container(
-                            width: 100,
-                            margin: const EdgeInsets.only(right: 8),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              image: DecorationImage(
-                                image: FileImage(entry.value),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: 4,
-                            right: 12,
-                            child: GestureDetector(
-                              onTap: () => _supprimerImage(entry.key),
-                              child: Container(
-                                padding: const EdgeInsets.all(2),
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(Icons.close,
-                                    size: 14, color: AppColors.mauveShadow),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    }),
-                  ],
-                ),
-              ),
+              _buildLabel('PHOTOS (MAX 5)'),
+              const SizedBox(height: AppSpacing.stackSm),
+              _buildPhotoPicker(),
 
-              const SizedBox(height: 20),
-
-              // Titre
-              _buildLabel('Titre'),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.stackLg),
+              _buildLabel('TITRE DE L\'ANNONCE'),
+              const SizedBox(height: AppSpacing.stackSm),
               _buildField(
                 controller: _titreController,
-                hint: 'Ex: iPhone 13 Pro Max',
+                hint: 'Ex: iPhone 14 Pro Max 256GB',
                 validator: (v) =>
                 v == null || v.isEmpty ? 'Champ obligatoire' : null,
               ),
 
-              const SizedBox(height: 16),
-
-              // Prix
-              _buildLabel('Prix (FCFA)'),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.stackLg),
+              _buildLabel('PRIX (FCFA)'),
+              const SizedBox(height: AppSpacing.stackSm),
               _buildField(
                 controller: _prixController,
-                hint: 'Ex: 150000',
+                hint: '0',
                 keyboardType: TextInputType.number,
+                suffixText: 'CFA',
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Champ obligatoire';
                   if (double.tryParse(v) == null) return 'Prix invalide';
@@ -248,64 +167,26 @@ class _CreerAnnonceScreenState extends State<CreerAnnonceScreen> {
                 },
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.stackLg),
+              _buildLabel('CATÉGORIE'),
+              const SizedBox(height: AppSpacing.stackSm),
+              _buildCategorieDropdown(),
 
-              // Catégorie
-              _buildLabel('Catégorie'),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<int>(
-                value: _categorieId,
-                hint: Text('Choisir une catégorie',
-                    style: TextStyle(
-                        color: AppColors.rosyTaupe, fontSize: 14)),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: AppColors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: AppColors.paleOak),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: AppColors.paleOak),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: AppColors.dustyRose),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
-                ),
-                items: _categories
-                    .map((c) => DropdownMenuItem<int>(
-                  value: c['id'] as int,
-                  child: Text(c['nom'],
-                      style: const TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 14)),
-                ))
-                    .toList(),
-                onChanged: (v) => setState(() => _categorieId = v),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Description
-              _buildLabel('Description'),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.stackLg),
+              _buildLabel('DESCRIPTION'),
+              const SizedBox(height: AppSpacing.stackSm),
               _buildField(
                 controller: _descController,
-                hint: 'Décrivez votre article...',
+                hint:
+                'Décrivez l\'état de l\'objet, son utilisation, ses défauts...',
                 maxLines: 4,
                 validator: (v) =>
                 v == null || v.isEmpty ? 'Champ obligatoire' : null,
               ),
 
-              const SizedBox(height: 16),
-
-              // Ville
-              _buildLabel('Ville'),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.stackLg),
+              _buildLabel('VILLE'),
+              const SizedBox(height: AppSpacing.stackSm),
               _buildField(
                 controller: _villeController,
                 hint: 'Ex: Dakar',
@@ -313,62 +194,144 @@ class _CreerAnnonceScreenState extends State<CreerAnnonceScreen> {
                 v == null || v.isEmpty ? 'Champ obligatoire' : null,
               ),
 
-              const SizedBox(height: 16),
-
-              // Quartier
-              _buildLabel('Quartier'),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.stackLg),
+              _buildLabel('QUARTIER'),
+              const SizedBox(height: AppSpacing.stackSm),
               _buildField(
                 controller: _quartierController,
                 hint: 'Ex: Plateau',
               ),
-            ],
-          ),
-        ),
-      ),
 
-      // Bouton publier
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-        color: AppColors.white,
-        child: ElevatedButton(
-          onPressed: _loading ? null : _publier,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.mauveShadow,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16)),
-          ),
-          child: _loading
-              ? const SizedBox(
-            height: 20,
-            width: 20,
-            child: CircularProgressIndicator(
-                color: Colors.white, strokeWidth: 2),
-          )
-              : const Text(
-            'Publier l\'annonce',
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-              color: Colors.white,
-            ),
+              const SizedBox(height: AppSpacing.stackLg + 8),
+              _buildPublishButton(),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildLabel(String text) {
-    return Text(
-      text,
-      style: TextStyle(
-        fontFamily: 'PlusJakartaSans',
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: AppColors.onSurface,
+  // ── Grille photos : principale (grande) + 4 secondaires ──
+  Widget _buildPhotoPicker() {
+    return SizedBox(
+      height: 180,
+      child: Row(
+        children: [
+          Expanded(
+            flex: 1,
+            child: _buildPhotoSlot(
+              file: _images.isNotEmpty ? _images[0] : null,
+              principal: true,
+              onTap: _images.isEmpty ? _ajouterImage : null,
+              onRemove:
+              _images.isNotEmpty ? () => _supprimerImage(0) : null,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            flex: 1,
+            child: Column(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Expanded(child: _buildSecondarySlot(1)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _buildSecondarySlot(2)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Expanded(child: _buildSecondarySlot(3)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _buildSecondarySlot(4)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildSecondarySlot(int index) {
+    final hasImage = index < _images.length;
+    return _buildPhotoSlot(
+      file: hasImage ? _images[index] : null,
+      principal: false,
+      onTap: !hasImage ? _ajouterImage : null,
+      onRemove: hasImage ? () => _supprimerImage(index) : null,
+    );
+  }
+
+  Widget _buildPhotoSlot({
+    File? file,
+    required bool principal,
+    VoidCallback? onTap,
+    VoidCallback? onRemove,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: file == null ? AppColors.softBlush : null,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          image: file != null
+              ? DecorationImage(image: FileImage(file), fit: BoxFit.cover)
+              : null,
+        ),
+        child: file == null
+            ? Center(
+          child: principal
+              ? Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.add_a_photo_outlined,
+                  color: AppColors.primary, size: 26),
+              const SizedBox(height: 8),
+              Text('Photo principale',
+                  style: AppTextStyles.bodySm.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.navy,
+                  )),
+            ],
+          )
+              : const Icon(Icons.add,
+              color: AppColors.primary, size: 20),
+        )
+            : Stack(
+          children: [
+            Positioned(
+              top: 4,
+              right: 4,
+              child: GestureDetector(
+                onTap: onRemove,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close,
+                      size: 13, color: AppColors.navy),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 2),
+      child: Text(text, style: AppTextStyles.labelCaps),
     );
   }
 
@@ -377,36 +340,109 @@ class _CreerAnnonceScreenState extends State<CreerAnnonceScreen> {
     required String hint,
     int maxLines = 1,
     TextInputType keyboardType = TextInputType.text,
+    String? suffixText,
     String? Function(String?)? validator,
   }) {
-    return TextFormField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      validator: validator,
-      style: TextStyle(
-          fontFamily: 'PlusJakartaSans',
-          fontSize: 14,
-          color: AppColors.onSurface),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(color: AppColors.rosyTaupe, fontSize: 14),
-        filled: true,
-        fillColor: AppColors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: AppColors.paleOak),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadows.card,
+      ),
+      child: TextFormField(
+        controller: controller,
+        maxLines: maxLines,
+        keyboardType: keyboardType,
+        validator: validator,
+        style: AppTextStyles.bodyMd,
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: AppTextStyles.bodyMd.copyWith(
+            color: AppColors.rosyTaupe,
+          ),
+          suffixText: suffixText,
+          suffixStyle: const TextStyle(
+            fontFamily: AppTextStyles.fontFamily,
+            fontWeight: FontWeight.w700,
+            color: AppColors.navy,
+            fontSize: 14,
+          ),
+          filled: true,
+          fillColor: AppColors.surface,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: AppColors.paleOak),
+      ),
+    );
+  }
+
+  Widget _buildCategorieDropdown() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadows.card,
+      ),
+      child: DropdownButtonFormField<int>(
+        value: _categorieId,
+        hint: Text('Sélectionner',
+            style:
+            AppTextStyles.bodyMd.copyWith(color: AppColors.rosyTaupe)),
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: AppColors.surface,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: AppColors.dustyRose),
+        icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.navy),
+        items: _categories
+            .map((c) => DropdownMenuItem<int>(
+          value: c['id'] as int,
+          child: Text(c['nom'], style: AppTextStyles.bodyMd),
+        ))
+            .toList(),
+        onChanged: (v) => setState(() => _categorieId = v),
+      ),
+    );
+  }
+
+  Widget _buildPublishButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 60,
+      child: ElevatedButton.icon(
+        onPressed: _loading ? null : _publier,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.full)),
+          elevation: 0,
         ),
-        contentPadding:
-        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        icon: _loading
+            ? const SizedBox(
+          height: 18,
+          width: 18,
+          child: CircularProgressIndicator(
+              color: Colors.white, strokeWidth: 2),
+        )
+            : const Icon(Icons.publish_rounded, size: 20),
+        label: Text(
+          _loading ? 'Publication...' : 'Publier l\'annonce',
+          style: const TextStyle(
+            fontFamily: AppTextStyles.fontFamily,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }

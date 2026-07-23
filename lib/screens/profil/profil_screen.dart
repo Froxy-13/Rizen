@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/profil_service.dart';
-import '../../services/annonce_service.dart';
 import '../../theme/app_theme.dart';
 import '../home/detail_annonce_screen.dart';
+import '../annonce/modifier_annonce_screen.dart';
 import '../auth/login_screen.dart';
 import '../favoris/favoris_screen.dart';
 import 'mes_annonces_screen.dart';
@@ -78,33 +77,29 @@ class _ProfilScreenState extends State<ProfilScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg)),
         title: Text(
           'Déconnexion',
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontWeight: FontWeight.w600,
-            color: AppColors.onSurface,
-          ),
+          style: AppTextStyles.titleMd,
         ),
         content: Text(
           'Voulez-vous vraiment vous déconnecter ?',
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
+          style: AppTextStyles.bodyMd.copyWith(
             color: AppColors.onSurfaceVariant,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Annuler',
+            child: const Text('Annuler',
                 style: TextStyle(color: AppColors.rosyTaupe)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.mauveShadow,
+              backgroundColor: AppColors.navy,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(AppRadius.full)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Déconnecter',
@@ -142,7 +137,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
     if (_loading) {
       return const Scaffold(
         body: Center(
-            child: CircularProgressIndicator(color: AppColors.dustyRose)),
+            child: CircularProgressIndicator(color: AppColors.primary)),
       );
     }
 
@@ -154,11 +149,11 @@ class _ProfilScreenState extends State<ProfilScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: RefreshIndicator(
-        color: AppColors.dustyRose,
+        color: AppColors.primary,
         onRefresh: _charger,
         child: CustomScrollView(
           slivers: [
-            // Header
+            // ── Header profil ────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 60, 20, 0),
@@ -166,14 +161,16 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   children: [
                     // Photo
                     Stack(
+                      alignment: Alignment.bottomRight,
                       children: [
                         Container(
-                          width: 100,
-                          height: 100,
+                          width: 110,
+                          height: 110,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                                color: AppColors.dustyRose, width: 2.5),
+                                color: AppColors.white, width: 4),
+                            boxShadow: AppShadows.card,
                           ),
                           child: ClipOval(
                             child: _uploadingPhoto
@@ -181,7 +178,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                               color: AppColors.softBlush,
                               child: const Center(
                                 child: CircularProgressIndicator(
-                                    color: AppColors.dustyRose),
+                                    color: AppColors.primary),
                               ),
                             )
                                 : photo != null
@@ -192,281 +189,113 @@ class _ProfilScreenState extends State<ProfilScreen> {
                                   color: AppColors.softBlush),
                               errorWidget: (_, __, ___) => Container(
                                 color: AppColors.softBlush,
-                                child: Icon(Icons.person,
-                                    color: AppColors.dustyRose,
-                                    size: 40),
+                                child: const Icon(Icons.person,
+                                    color: AppColors.primary,
+                                    size: 44),
                               ),
                             )
                                 : Container(
                               color: AppColors.softBlush,
-                              child: Icon(Icons.person,
-                                  color: AppColors.dustyRose,
-                                  size: 40),
+                              child: const Icon(Icons.person,
+                                  color: AppColors.primary,
+                                  size: 44),
                             ),
                           ),
                         ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: GestureDetector(
-                            onTap: _changerPhoto,
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: AppColors.mauveShadow,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: AppColors.white, width: 2),
-                              ),
-                              child: const Icon(Icons.camera_alt,
-                                  color: Colors.white, size: 14),
+                        GestureDetector(
+                          onTap: _changerPhoto,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: AppColors.white, width: 2),
                             ),
+                            child: const Icon(Icons.edit,
+                                color: Colors.white, size: 16),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.stackMd),
 
-                    // Nom
-                    Text(
-                      nom,
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.onSurface,
-                      ),
-                    ),
+                    Text(nom, style: AppTextStyles.headlineSm),
                     const SizedBox(height: 4),
                     Text(
                       _membreDepuis(),
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 13,
-                        color: AppColors.rosyTaupe,
-                      ),
+                      style: AppTextStyles.bodySm,
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
 
-                    // Bouton modifier
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => _ouvrirModification(),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.mauveShadow,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16)),
-                        ),
-                        child: const Text(
-                          'Modifier le profil',
-                          style: TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                            color: Colors.white,
-                          ),
+                    // Modifier le profil (édition nom/prénom/téléphone)
+                    TextButton(
+                      onPressed: _ouvrirModification,
+                      child: Text(
+                        'Modifier le profil',
+                        style: AppTextStyles.bodySm.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.navy,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppSpacing.stackMd),
 
-                    // Stats
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildStat(
-                            '${_annonces.length}',
-                            'ANNONCES',
+                    // ── Carte stats fusionnée ────────────────
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.xl),
+                        boxShadow: AppShadows.card,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildStat('${_annonces.length}', 'ANNONCES'),
+                          Container(
+                            height: 36,
+                            width: 1,
+                            color: AppColors.paleOak,
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildStat(
+                          _buildStat(
                             _noteMoyenne != null
                                 ? _noteMoyenne!.toStringAsFixed(1)
                                 : '-',
-                            'Avis',
+                            'NOTE',
                             icon: _noteMoyenne != null
                                 ? Icons.star
                                 : null,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSpacing.stackLg),
                   ],
                 ),
               ),
             ),
 
-            // Mes annonces
+            // ── Section Compte ───────────────────────────
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Mes annonces',
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.onSurface,
-                      ),
-                    ),
-                    if (_annonces.length > 4)
-                      GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const MesAnnoncesScreen()),
-                        ),
-                        child: Text(
-                          'Voir tout',
-                          style: TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.dustyRose,
-                          ),
-                        ),
-                      ),
-                  ],
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.containerMargin, 0,
+                  AppSpacing.containerMargin,
+                  AppSpacing.stackSm,
                 ),
+                child: Text('Compte', style: AppTextStyles.headlineSm),
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-
-            _annonces.isEmpty
-                ? SliverToBoxAdapter(
+            SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 16),
-                child: Center(
-                  child: Text(
-                    'Aucune annonce publiée',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      color: AppColors.rosyTaupe,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
-            )
-                : SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverGrid(
-                gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.8,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                    final annonce = _annonces[index];
-                    final images = (annonce['images_annonce']
-                    as List<dynamic>? ??
-                        [])
-                        .map((e) => e['url_image'] as String)
-                        .toList();
-                    final imageUrl =
-                    images.isNotEmpty ? images.first : null;
-
-                    return GestureDetector(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => DetailAnnonceScreen(
-                              annonceId: annonce['id'] as int),
-                        ),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border:
-                          Border.all(color: AppColors.paleOak),
-                        ),
-                        child: Column(
-                          crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius:
-                                const BorderRadius.vertical(
-                                    top: Radius.circular(16)),
-                                child: imageUrl != null
-                                    ? CachedNetworkImage(
-                                  imageUrl: imageUrl,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                )
-                                    : Container(
-                                  color: AppColors.softBlush,
-                                  child: Center(
-                                    child: Icon(
-                                        Icons.image_outlined,
-                                        color:
-                                        AppColors.paleOak),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: Column(
-                                crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${(annonce['prix_actuel'] as num).toStringAsFixed(0)} FCFA',
-                                    style: TextStyle(
-                                      fontFamily: 'PlusJakartaSans',
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.mauveShadow,
-                                    ),
-                                  ),
-                                  Text(
-                                    annonce['titre'] ?? '',
-                                    style: TextStyle(
-                                      fontFamily: 'PlusJakartaSans',
-                                      fontSize: 12,
-                                      color: AppColors.onSurface,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                  childCount: _annonces.length > 4
-                      ? 4
-                      : _annonces.length,
-                ),
-              ),
-            ),
-
-            // Menu
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+                    horizontal: AppSpacing.containerMargin),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.paleOak),
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
+                    boxShadow: AppShadows.card,
                   ),
                   child: Column(
                     children: [
@@ -479,40 +308,208 @@ class _ProfilScreenState extends State<ProfilScreen> {
                               builder: (_) => const FavorisScreen()),
                         ),
                       ),
-                      Divider(
-                          color: AppColors.paleOak,
-                          height: 1,
-                          indent: 56),
+                      const Divider(
+                          color: AppColors.paleOak, height: 1, indent: 60),
                       _buildMenuItem(
                         icon: Icons.settings_outlined,
                         label: 'Paramètres',
                         onTap: () {},
                       ),
-                      Divider(
-                          color: AppColors.paleOak,
-                          height: 1,
-                          indent: 56),
+                      const Divider(
+                          color: AppColors.paleOak, height: 1, indent: 60),
                       _buildMenuItem(
                         icon: Icons.history,
                         label: "Historique d'achat",
                         onTap: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const MesTransactionsScreen()),
+                          MaterialPageRoute(
+                              builder: (_) => const MesTransactionsScreen()),
                         ),
                       ),
-                      Divider(
-                          color: AppColors.paleOak,
-                          height: 1,
-                          indent: 56),
+                      const Divider(
+                          color: AppColors.paleOak, height: 1, indent: 60),
                       _buildMenuItem(
                         icon: Icons.logout,
                         label: 'Déconnexion',
-                        color: AppColors.dustyRose,
+                        color: AppColors.primary,
                         onTap: _deconnecter,
                       ),
                     ],
                   ),
                 ),
+              ),
+            ),
+
+            // ── Section Mes annonces ─────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.containerMargin,
+                  AppSpacing.stackLg,
+                  AppSpacing.containerMargin,
+                  AppSpacing.stackSm,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Mes annonces', style: AppTextStyles.headlineSm),
+                    if (_annonces.length > 4)
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const MesAnnoncesScreen()),
+                        ),
+                        child: Text(
+                          'VOIR TOUT',
+                          style: AppTextStyles.labelCaps.copyWith(
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+
+            _annonces.isEmpty
+                ? SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 16),
+                child: Center(
+                  child: Text(
+                    'Aucune annonce publiée',
+                    style: AppTextStyles.bodyMd.copyWith(
+                      color: AppColors.rosyTaupe,
+                    ),
+                  ),
+                ),
+              ),
+            )
+                : SliverPadding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.containerMargin),
+              sliver: SliverGrid(
+                gridDelegate:
+                const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: AppSpacing.gutter,
+                  mainAxisSpacing: AppSpacing.gutter,
+                  childAspectRatio: 0.78,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                      (context, index) =>
+                      _buildAnnonceCard(_annonces[index]),
+                  childCount: _annonces.length > 4
+                      ? 4
+                      : _annonces.length,
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 140)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnnonceCard(Map<String, dynamic> annonce) {
+    final images = (annonce['images_annonce'] as List<dynamic>? ?? [])
+        .map((e) => e['url_image'] as String)
+        .toList();
+    final imageUrl = images.isNotEmpty ? images.first : null;
+
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              DetailAnnonceScreen(annonceId: annonce['id'] as int),
+        ),
+      ).then((_) => _charger()),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.card,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(AppRadius.lg)),
+                    child: SizedBox.expand(
+                      child: imageUrl != null
+                          ? CachedNetworkImage(
+                        imageUrl: imageUrl,
+                        fit: BoxFit.cover,
+                      )
+                          : Container(
+                        color: AppColors.softBlush,
+                        child: const Center(
+                          child: Icon(Icons.image_outlined,
+                              color: AppColors.paleOak),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Menu rapide : modifier cette annonce
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () async {
+                        final modifie = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                ModifierAnnonceScreen(annonce: annonce),
+                          ),
+                        );
+                        if (modifie == true) _charger();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: const BoxDecoration(
+                          color: AppColors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.more_horiz,
+                            size: 18, color: AppColors.navy),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    annonce['titre'] ?? '',
+                    style: AppTextStyles.titleMd.copyWith(fontSize: 13),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${(annonce['prix_actuel'] as num).toStringAsFixed(0)} FCFA',
+                    style: const TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -522,46 +519,29 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildStat(String valeur, String label, {IconData? icon}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.paleOak),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, color: AppColors.dustyRose, size: 16),
-                const SizedBox(width: 4),
-              ],
-              Text(
-                valeur,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.mauveShadow,
-                ),
-              ),
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (icon != null) ...[
+              const Icon(Icons.star, color: Color(0xFFFFB800), size: 17),
+              const SizedBox(width: 4),
             ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: AppColors.rosyTaupe,
-              letterSpacing: 0.5,
+            Text(
+              valeur,
+              style: const TextStyle(
+                fontFamily: AppTextStyles.fontFamily,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppColors.navy,
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(label, style: AppTextStyles.labelCaps),
+      ],
     );
   }
 
@@ -579,27 +559,25 @@ class _ProfilScreenState extends State<ProfilScreen> {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(
-                color: (color ?? AppColors.mauveShadow).withOpacity(0.1),
-                shape: BoxShape.circle,
+                color: (color ?? AppColors.navy).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               child: Icon(icon, color: c, size: 18),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
               child: Text(
                 label,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                style: AppTextStyles.bodyMd.copyWith(
+                  fontWeight: FontWeight.w600,
                   color: c,
                 ),
               ),
             ),
             if (color == null)
-              Icon(Icons.chevron_right,
+              const Icon(Icons.chevron_right,
                   color: AppColors.paleOak, size: 20),
           ],
         ),
@@ -622,10 +600,10 @@ class _ProfilScreenState extends State<ProfilScreen> {
       builder: (ctx) => Container(
         padding: EdgeInsets.fromLTRB(
             20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
-        decoration: BoxDecoration(
-          color: AppColors.white,
+        decoration: const BoxDecoration(
+          color: AppColors.background,
           borderRadius:
-          const BorderRadius.vertical(top: Radius.circular(24)),
+          BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -637,28 +615,20 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   height: 4,
                   decoration: BoxDecoration(
                     color: AppColors.paleOak,
-                    borderRadius: BorderRadius.circular(9999),
+                    borderRadius: BorderRadius.circular(AppRadius.full),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Modifier le profil',
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.onSurface,
-                ),
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.stackMd),
+              Text('Modifier le profil', style: AppTextStyles.headlineSm),
+              const SizedBox(height: AppSpacing.stackLg),
               _buildChamp('Prénom', prenomController),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.stackMd),
               _buildChamp('Nom', nomController),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.stackMd),
               _buildChamp('Téléphone', telController,
                   type: TextInputType.phone),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.stackLg),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -673,21 +643,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     );
                     _charger();
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.mauveShadow,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                  ),
-                  child: const Text(
-                    'Enregistrer',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: const Text('Enregistrer'),
                 ),
               ),
             ],
@@ -704,24 +660,18 @@ class _ProfilScreenState extends State<ProfilScreen> {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.onSurface,
-          ),
+          style: AppTextStyles.bodyMd.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
           keyboardType: type,
-          style: TextStyle(
-              fontFamily: 'PlusJakartaSans', color: AppColors.onSurface),
+          style: AppTextStyles.bodyMd,
           decoration: InputDecoration(
             filled: true,
             fillColor: AppColors.softBlush,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               borderSide: BorderSide.none,
             ),
             contentPadding: const EdgeInsets.symmetric(
