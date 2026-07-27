@@ -537,7 +537,75 @@ class _SuiviTransactionScreenState extends State<SuiviTransactionScreen> {
     }
   }
 
-  Future<void> _action(String type) async {
+  Future<void> _ouvrirDialogueLitige() async {
+    final controller = TextEditingController();
+    final motif = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg)),
+        title: Text('Ouvrir un litige', style: AppTextStyles.titleMd),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Expliquez le problème rencontré — ce motif sera transmis à Rizen pour traitement.',
+                style: AppTextStyles.bodySm,
+              ),
+              const SizedBox(height: AppSpacing.stackMd),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                maxLines: 3,
+                style: AppTextStyles.bodyMd,
+                decoration: InputDecoration(
+                  hintText: 'Ex : article non conforme aux photos...',
+                  hintStyle: AppTextStyles.bodyMd.copyWith(
+                    color: AppColors.rosyTaupe,
+                  ),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Annuler',
+                style: TextStyle(color: AppColors.rosyTaupe)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md)),
+            ),
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Ouvrir le litige',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (motif != null && motif.isNotEmpty) {
+      _action('litige', motif: motif);
+    } else if (motif != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Merci de préciser le motif du litige')),
+      );
+    }
+  }
+
+  Future<void> _action(String type, {String? motif}) async {
     setState(() => _actionEnCours = true);
     try {
       if (type == 'envoi') {
@@ -610,7 +678,7 @@ class _SuiviTransactionScreenState extends State<SuiviTransactionScreen> {
         }
         return;
       } else if (type == 'litige') {
-        await _service.ouvrirLitige(widget.transactionId);
+        await _service.ouvrirLitige(widget.transactionId, motif ?? '');
         await _charger();
       }
     } catch (e) {
@@ -936,7 +1004,7 @@ class _SuiviTransactionScreenState extends State<SuiviTransactionScreen> {
               label: 'Ouvrir un litige',
               icon: Icons.report_outlined,
               couleur: Colors.red.shade600,
-              onTap: () => _action('litige'),
+              onTap: _ouvrirDialogueLitige,
             ),
           ],
         );

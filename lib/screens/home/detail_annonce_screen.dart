@@ -8,6 +8,7 @@ import '../messages/chat_screen.dart';
 import '../negociations/negociation_screen.dart';
 import '../transaction/paiement_screen.dart';
 import '../annonce/modifier_annonce_screen.dart';
+import '../../utils/auth_guard.dart';
 
 class DetailAnnonceScreen extends StatefulWidget {
   final int annonceId;
@@ -82,14 +83,8 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
   }
 
   Future<void> _toggleFavori() async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
-    if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Connectez-vous pour ajouter aux favoris')),
-      );
-      return;
-    }
+    if (exigerConnexion(context)) return;
+    final userId = Supabase.instance.client.auth.currentUser!.id;
     setState(() => _estFavori = !_estFavori);
     try {
       await _service.toggleFavori(widget.annonceId, userId, !_estFavori);
@@ -99,15 +94,8 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
   }
 
   void _ouvrirSignalement() {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
-    if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content:
-            Text('Connectez-vous pour signaler une annonce')),
-      );
-      return;
-    }
+    if (exigerConnexion(context)) return;
+    final userId = Supabase.instance.client.auth.currentUser!.id;
 
     String? raisonSelectionnee;
     final descController = TextEditingController();
@@ -248,6 +236,7 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
     [quartier, ville].where((e) => e != null).join(', ');
     final estVendeur = _data!['utilisateur_id'] ==
         Supabase.instance.client.auth.currentUser?.id;
+    final estVendue = _data!['statut'] == 'vendue';
     final noteMoyenne = _noteVendeur?['note_moyenne'] as double?;
     final nombreAvis = _noteVendeur?['nombre_avis'] as int?;
 
@@ -433,6 +422,38 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                       ),
 
                     const SizedBox(height: AppSpacing.stackLg),
+
+                    // ── Bandeau "Vendu" ──────────────────────
+                    if (estVendue && !estVendeur) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.navy,
+                          borderRadius:
+                          BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.check_circle,
+                                color: Colors.white, size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Cet article a déjà été vendu',
+                              style: const TextStyle(
+                                fontFamily: AppTextStyles.fontFamily,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.stackLg),
+                    ],
 
                     // ── Carte vendeur ──────────────────────
                     Container(
@@ -646,7 +667,37 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
         ),
         child: estVendeur
             ? _buildBarreVendeur()
+            : estVendue
+            ? _buildBarreVendue()
             : _buildBarreAcheteur(prix, images),
+      ),
+    );
+  }
+
+  // ── Barre d'action quand l'annonce est déjà vendue (côté acheteur) ──
+  Widget _buildBarreVendue() {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton.icon(
+        onPressed: null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.paleOak,
+          disabledBackgroundColor: AppColors.paleOak,
+          foregroundColor: AppColors.rosyTaupe,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.full)),
+          elevation: 0,
+        ),
+        icon: const Icon(Icons.check_circle_outline, size: 20),
+        label: const Text(
+          'Article déjà vendu',
+          style: TextStyle(
+            fontFamily: AppTextStyles.fontFamily,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }
@@ -701,16 +752,9 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                 icon: Icons.chat_bubble_outline,
                 label: 'Message',
                 onTap: () async {
+                  if (exigerConnexion(context)) return;
                   final userId =
-                      Supabase.instance.client.auth.currentUser?.id;
-                  if (userId == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text(
-                              'Connectez-vous pour contacter le vendeur')),
-                    );
-                    return;
-                  }
+                      Supabase.instance.client.auth.currentUser!.id;
                   final vendeurId =
                   _data!['utilisateur_id'] as String;
                   if (vendeurId == userId) {
@@ -751,9 +795,9 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                 icon: Icons.handshake_outlined,
                 label: 'Négocier',
                 onTap: () {
+                  if (exigerConnexion(context)) return;
                   final userId =
-                      Supabase.instance.client.auth.currentUser?.id;
-                  if (userId == null) return;
+                      Supabase.instance.client.auth.currentUser!.id;
                   final vendeurId =
                   _data!['utilisateur_id'] as String;
                   if (vendeurId == userId) {
@@ -789,9 +833,9 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
           height: 56,
           child: ElevatedButton.icon(
             onPressed: () async {
+              if (exigerConnexion(context)) return;
               final userId =
-                  Supabase.instance.client.auth.currentUser?.id;
-              if (userId == null) return;
+                  Supabase.instance.client.auth.currentUser!.id;
               final vendeurId = _data!['utilisateur_id'] as String;
               if (vendeurId == userId) {
                 ScaffoldMessenger.of(context).showSnackBar(

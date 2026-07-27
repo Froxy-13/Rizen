@@ -39,6 +39,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  // Traduit une erreur réseau (pas de connexion internet) en message clair.
+  bool _estErreurReseau(Object e) {
+    final texte = e.toString().toLowerCase();
+    return texte.contains('socketexception') ||
+        texte.contains('failed host lookup') ||
+        texte.contains('network is unreachable') ||
+        texte.contains('connection failed') ||
+        texte.contains('clientexception');
+  }
+
   Future<void> _inscription() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -71,6 +81,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_estErreurReseau(e)
+                ? 'Aucune connexion à internet'
+                : 'Une erreur est survenue, veuillez réessayer'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -119,7 +140,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur Google : $e')),
+          SnackBar(
+            content: Text(_estErreurReseau(e)
+                ? 'Aucune connexion à internet'
+                : 'Erreur Google : $e'),
+          ),
         );
       }
     } finally {
@@ -425,11 +450,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // Continuer sans compte
                 Center(
                   child: GestureDetector(
-                    onTap: () => Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const MainScreen()),
-                    ),
+                    onTap: () async {
+                      // Important : déconnecte toute session résiduelle
+                      // avant de basculer en mode visiteur.
+                      await Supabase.instance.client.auth.signOut();
+                      if (context.mounted) {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const MainScreen()),
+                        );
+                      }
+                    },
                     child: Text(
                       'Continuer sans compte',
                       style: TextStyle(

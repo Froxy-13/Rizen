@@ -66,6 +66,19 @@ class _CreerAnnonceScreenState extends State<CreerAnnonceScreen> {
       );
       return;
     }
+    if (_images.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Ajoutez au moins une photo de l\'article')),
+      );
+      return;
+    }
+    if (_images.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ajoutez au moins une photo')),
+      );
+      return;
+    }
 
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;

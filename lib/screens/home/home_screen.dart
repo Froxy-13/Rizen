@@ -5,6 +5,7 @@ import '../../models/annonce.dart';
 import '../../services/annonce_service.dart';
 import '../../theme/app_theme.dart';
 import 'detail_annonce_screen.dart';
+import '../../utils/auth_guard.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -77,14 +78,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _toggleFavori(Annonce annonce) async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
-    if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Connectez-vous pour ajouter aux favoris')),
-      );
-      return;
-    }
+    if (exigerConnexion(context)) return;
+    final userId = Supabase.instance.client.auth.currentUser!.id;
     final estFavori = _favorisIds.contains(annonce.id);
     setState(() {
       if (estFavori) {
@@ -356,6 +351,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCard(Annonce annonce) {
     final estFavori = _favorisIds.contains(annonce.id);
+    final estMonAnnonce =
+        annonce.utilisateurId ==
+            Supabase.instance.client.auth.currentUser?.id;
     final imageUrl =
     annonce.images.isNotEmpty ? annonce.images.first : null;
     final prixNegorie = _prixNegocies[annonce.id];
@@ -455,6 +453,30 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         child: const Text(
                           'Prix négocié',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  // Badge Votre annonce (seller own listing)
+                  if (estMonAnnonce)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius:
+                          BorderRadius.circular(AppRadius.sm),
+                        ),
+                        child: const Text(
+                          'Votre annonce',
                           style: TextStyle(
                             fontFamily: AppTextStyles.fontFamily,
                             fontSize: 10,

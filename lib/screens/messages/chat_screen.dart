@@ -356,11 +356,24 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           Padding(
             padding: const EdgeInsets.only(top: 4, bottom: 10, left: 4, right: 4),
-            child: Text(
-              isMe
-                  ? '${_formatHeureMessage(msg['date_envoi'])}${msg['lu'] == true ? ' • Vu' : ''}'
-                  : _formatHeureMessage(msg['date_envoi']),
-              style: AppTextStyles.bodySm.copyWith(fontSize: 11),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _formatHeureMessage(msg['date_envoi']),
+                  style: AppTextStyles.bodySm.copyWith(fontSize: 11),
+                ),
+                if (isMe) ...[
+                  const SizedBox(width: 3),
+                  Icon(
+                    msg['lu'] == true ? Icons.done_all : Icons.done,
+                    size: 14,
+                    color: msg['lu'] == true
+                        ? AppColors.primary
+                        : AppColors.rosyTaupe,
+                  ),
+                ],
+              ],
             ),
           ),
         ],

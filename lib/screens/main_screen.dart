@@ -11,6 +11,7 @@ import 'annonce/creer_annonce_screen.dart';
 import 'messages/conversations_screen.dart';
 import 'profil/profil_screen.dart';
 import 'admin/admin_screen.dart';
+import '../utils/auth_guard.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -235,9 +236,12 @@ class _MainScreenState extends State<MainScreen> {
 
   Widget _buildNavIcon(IconData icon, int index, {int badge = 0}) {
     final active = _currentIndex == index;
+    // Messages (2) et Profil (3) exigent un compte connecté
+    final protege = index == 2 || index == 3;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
+        if (protege && exigerConnexion(context)) return;
         setState(() => _currentIndex = index);
         _chargerNonLus();
       },
@@ -288,6 +292,7 @@ class _CenterButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
+        if (exigerConnexion(context)) return;
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const CreerAnnonceScreen()),

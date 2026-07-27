@@ -6,6 +6,7 @@ import '../../services/annonce_service.dart';
 import '../../theme/app_theme.dart';
 import '../home/detail_annonce_screen.dart';
 import 'filtres_bottom_sheet.dart';
+import '../../utils/auth_guard.dart';
 
 class DecouvrirScreen extends StatefulWidget {
   const DecouvrirScreen({super.key});
@@ -61,14 +62,8 @@ class _DecouvrirScreenState extends State<DecouvrirScreen> {
   }
 
   Future<void> _toggleFavori(Annonce annonce) async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
-    if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Connectez-vous pour ajouter aux favoris')),
-      );
-      return;
-    }
+    if (exigerConnexion(context)) return;
+    final userId = Supabase.instance.client.auth.currentUser!.id;
     final estFavori = _favorisIds.contains(annonce.id);
     setState(() {
       if (estFavori) {
@@ -427,6 +422,8 @@ class _DecouvrirScreenState extends State<DecouvrirScreen> {
   // ── Carte listing : prix incrusté sur l'image (style "Découvrir") ──
   Widget _buildListingCard(Annonce annonce) {
     final estFavori = _favorisIds.contains(annonce.id);
+    final estMonAnnonce = annonce.utilisateurId ==
+        Supabase.instance.client.auth.currentUser?.id;
     final imageUrl =
     annonce.images.isNotEmpty ? annonce.images.first : null;
 
@@ -514,6 +511,30 @@ class _DecouvrirScreenState extends State<DecouvrirScreen> {
                     ),
                   ),
                 ),
+                // Badge Votre annonce
+                if (estMonAnnonce)
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius:
+                        BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: const Text(
+                        'Votre annonce',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

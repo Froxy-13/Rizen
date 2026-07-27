@@ -163,12 +163,13 @@ class TransactionService {
         .eq('id', annonceId);
   }
 
-  /// Ouvrir un litige
-  Future<void> ouvrirLitige(int transactionId) async {
-    await _client
-        .from('transactions')
-        .update({'statut': 'litige'})
-        .eq('id', transactionId);
+  /// Ouvrir un litige — le motif est maintenant obligatoire pour que
+  /// l'admin ait un vrai contexte à traiter, pas juste un statut vide.
+  Future<void> ouvrirLitige(int transactionId, String motif) async {
+    await _client.from('transactions').update({
+      'statut': 'litige',
+      'motif_litige': motif,
+    }).eq('id', transactionId);
   }
 
   /// Récupère une transaction par son ID
