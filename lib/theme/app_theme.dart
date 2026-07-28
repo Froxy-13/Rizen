@@ -242,6 +242,31 @@ class AppTheme {
         color: AppColors.paleOak,
         thickness: 1,
       ),
+      // ── Thème global des popups (AlertDialog) ────────────────
+      // Sans ça, Material 3 teinte légèrement le fond du dialogue avec
+      // la couleur primaire à cause de l'élévation par défaut — d'où le
+      // rendu rose/pêche moche sur fond blanc. surfaceTintColor à
+      // transparent + fond crème explicite corrige ça partout d'un coup.
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        titleTextStyle: const TextStyle(
+          fontFamily: AppTextStyles.fontFamily,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: AppColors.navy,
+        ),
+        contentTextStyle: const TextStyle(
+          fontFamily: AppTextStyles.fontFamily,
+          fontSize: 14,
+          color: AppColors.onSurfaceVariant,
+          height: 1.4,
+        ),
+      ),
     );
   }
 }

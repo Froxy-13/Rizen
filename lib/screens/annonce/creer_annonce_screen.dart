@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 import '../../services/annonce_service.dart';
+import '../../services/profil_service.dart';
 import '../../theme/app_theme.dart';
 
 class CreerAnnonceScreen extends StatefulWidget {
@@ -15,11 +16,10 @@ class CreerAnnonceScreen extends StatefulWidget {
 class _CreerAnnonceScreenState extends State<CreerAnnonceScreen> {
   final _formKey = GlobalKey<FormState>();
   final _service = AnnonceService();
+  final _profilService = ProfilService();
   final _titreController = TextEditingController();
   final _descController = TextEditingController();
   final _prixController = TextEditingController();
-  final _villeController = TextEditingController();
-  final _quartierController = TextEditingController();
 
   List<Map<String, dynamic>> _categories = [];
   int? _categorieId;
@@ -92,13 +92,18 @@ class _CreerAnnonceScreenState extends State<CreerAnnonceScreen> {
         urls.add(url);
       }
 
+      // Ville/quartier ne sont plus demandés au vendeur — on les déduit
+      // automatiquement de son adresse de profil.
+      final profil = await _profilService.getMonProfil();
+      final adresse = (profil?['adresse'] as String?)?.trim();
+
       await _service.creerAnnonce(
         titre: _titreController.text.trim(),
         description: _descController.text.trim(),
         prix: double.parse(_prixController.text.trim()),
         categorieId: _categorieId!,
-        ville: _villeController.text.trim(),
-        quartier: _quartierController.text.trim(),
+        ville: 'Dakar',
+        quartier: (adresse == null || adresse.isEmpty) ? 'Dakar' : adresse,
         userId: userId,
         urlsImages: urls,
       );
@@ -111,8 +116,6 @@ class _CreerAnnonceScreenState extends State<CreerAnnonceScreen> {
         _titreController.clear();
         _descController.clear();
         _prixController.clear();
-        _villeController.clear();
-        _quartierController.clear();
         setState(() {
           _images = [];
           _categorieId = null;
@@ -186,33 +189,13 @@ class _CreerAnnonceScreenState extends State<CreerAnnonceScreen> {
               _buildCategorieDropdown(),
 
               const SizedBox(height: AppSpacing.stackLg),
-              _buildLabel('DESCRIPTION'),
+              _buildLabel('DESCRIPTION (OPTIONNEL)'),
               const SizedBox(height: AppSpacing.stackSm),
               _buildField(
                 controller: _descController,
                 hint:
                 'Décrivez l\'état de l\'objet, son utilisation, ses défauts...',
                 maxLines: 4,
-                validator: (v) =>
-                v == null || v.isEmpty ? 'Champ obligatoire' : null,
-              ),
-
-              const SizedBox(height: AppSpacing.stackLg),
-              _buildLabel('VILLE'),
-              const SizedBox(height: AppSpacing.stackSm),
-              _buildField(
-                controller: _villeController,
-                hint: 'Ex: Dakar',
-                validator: (v) =>
-                v == null || v.isEmpty ? 'Champ obligatoire' : null,
-              ),
-
-              const SizedBox(height: AppSpacing.stackLg),
-              _buildLabel('QUARTIER'),
-              const SizedBox(height: AppSpacing.stackSm),
-              _buildField(
-                controller: _quartierController,
-                hint: 'Ex: Plateau',
               ),
 
               const SizedBox(height: AppSpacing.stackLg + 8),

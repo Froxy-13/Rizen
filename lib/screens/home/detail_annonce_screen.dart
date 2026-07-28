@@ -9,6 +9,7 @@ import '../negociations/negociation_screen.dart';
 import '../transaction/paiement_screen.dart';
 import '../annonce/modifier_annonce_screen.dart';
 import '../../utils/auth_guard.dart';
+import '../../widgets/confirmation_dialog.dart';
 
 class DetailAnnonceScreen extends StatefulWidget {
   final int annonceId;
@@ -704,39 +705,97 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
 
   // ── Barre d'action côté vendeur : juste "Modifier" ──
   Widget _buildBarreVendeur() {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton.icon(
-        onPressed: () async {
-          final modifie = await Navigator.push<bool>(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ModifierAnnonceScreen(annonce: _data!),
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: 56,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                final modifie = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ModifierAnnonceScreen(annonce: _data!),
+                  ),
+                );
+                if (modifie == true) {
+                  _charger();
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.full)),
+                elevation: 0,
+              ),
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              label: const Text(
+                'Modifier',
+                style: TextStyle(
+                  fontFamily: AppTextStyles.fontFamily,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
-          );
-          if (modifie == true) {
-            _charger();
-          }
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.full)),
-          elevation: 0,
-        ),
-        icon: const Icon(Icons.edit_outlined, size: 20),
-        label: const Text(
-          'Modifier l\'annonce',
-          style: TextStyle(
-            fontFamily: AppTextStyles.fontFamily,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
           ),
         ),
-      ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: SizedBox(
+            height: 56,
+            child: OutlinedButton.icon(
+              onPressed: _confirmerSuppression,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.error,
+                side: const BorderSide(color: AppColors.error, width: 1.5),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.full)),
+              ),
+              icon: const Icon(Icons.delete_outline, size: 20),
+              label: const Text(
+                'Supprimer',
+                style: TextStyle(
+                  fontFamily: AppTextStyles.fontFamily,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
+  }
+
+  Future<void> _confirmerSuppression() async {
+    final confirm = await confirmerAction(
+      context,
+      titre: 'Supprimer cette annonce ?',
+      message:
+      'Cette action est irréversible. L\'annonce et ses photos seront définitivement supprimées.',
+      labelConfirmer: 'Supprimer',
+      destructif: true,
+    );
+
+    if (confirm == true) {
+      try {
+        await _service.supprimerAnnonce(widget.annonceId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Annonce supprimée')),
+          );
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erreur : $e')),
+          );
+        }
+      }
+    }
   }
 
   // ── Barre d'action côté acheteur : Message / Négocier / Acheter ──

@@ -102,6 +102,13 @@ class AnnonceService {
     await _client.from('images_annonce').delete().eq('id', imageId);
   }
 
+  /// Supprime une annonce (et ses images en cascade si la contrainte FK
+  /// est en ON DELETE CASCADE — sinon les lignes images_annonce resteront
+  /// orphelines mais n'apparaîtront plus nulle part).
+  Future<void> supprimerAnnonce(int annonceId) async {
+    await _client.from('annonces').delete().eq('id', annonceId);
+  }
+
   /// Note moyenne + nombre d'avis reçus par un vendeur (avis où
   /// emetteur = 'acheteur', donc des avis laissés SUR ce vendeur).
   /// Retourne null si le vendeur n'a encore aucun avis.

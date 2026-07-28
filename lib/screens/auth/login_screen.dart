@@ -37,7 +37,12 @@ class _LoginScreenState extends State<LoginScreen> {
         texte.contains('failed host lookup') ||
         texte.contains('network is unreachable') ||
         texte.contains('connection failed') ||
-        texte.contains('clientexception');
+        texte.contains('connection reset') ||
+        texte.contains('connection refused') ||
+        texte.contains('clientexception') ||
+        texte.contains('authretryablefetchexception') ||
+        texte.contains('timeout') ||
+        texte.contains('xmlhttprequest');
   }
 
   Future<void> _connexion() async {
@@ -56,13 +61,17 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } on AuthException catch (e) {
       if (mounted) {
-        String message = 'Une erreur est survenue, veuillez réessayer';
-        if (e.message.contains('Invalid login credentials')) {
+        String message;
+        if (_estErreurReseau(e)) {
+          message = 'Aucune connexion à internet';
+        } else if (e.message.contains('Invalid login credentials')) {
           message = 'Email ou mot de passe incorrect';
         } else if (e.statusCode == '500' ||
             e.message.contains('Database error granting user') ||
             e.message.contains('unexpected_failure')) {
           message = 'Votre compte a été suspendu. Contactez l\'administrateur.';
+        } else {
+          message = 'Une erreur est survenue, veuillez réessayer';
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

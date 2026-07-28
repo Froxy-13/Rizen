@@ -9,6 +9,8 @@ import '../auth/login_screen.dart';
 import '../favoris/favoris_screen.dart';
 import 'mes_annonces_screen.dart';
 import 'mes_transactions_screen.dart';
+import '../../widgets/confirmation_dialog.dart';
+import 'changer_mot_de_passe_screen.dart';
 
 class ProfilScreen extends StatefulWidget {
   const ProfilScreen({super.key});
@@ -74,39 +76,12 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Future<void> _deconnecter() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.lg)),
-        title: Text(
-          'Déconnexion',
-          style: AppTextStyles.titleMd,
-        ),
-        content: Text(
-          'Voulez-vous vraiment vous déconnecter ?',
-          style: AppTextStyles.bodyMd.copyWith(
-            color: AppColors.onSurfaceVariant,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler',
-                style: TextStyle(color: AppColors.rosyTaupe)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.navy,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.full)),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Déconnecter',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+    final confirm = await confirmerAction(
+      context,
+      titre: 'Déconnexion',
+      message: 'Voulez-vous vraiment vous déconnecter ?',
+      labelConfirmer: 'Déconnecter',
+      destructif: true,
     );
 
     if (confirm == true) {
@@ -311,6 +286,18 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       const Divider(
                           color: AppColors.paleOak, height: 1, indent: 60),
                       _buildMenuItem(
+                        icon: Icons.lock_reset_outlined,
+                        label: 'Changer le mot de passe',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                              const ChangerMotDePasseScreen()),
+                        ),
+                      ),
+                      const Divider(
+                          color: AppColors.paleOak, height: 1, indent: 60),
+                      _buildMenuItem(
                         icon: Icons.settings_outlined,
                         label: 'Paramètres',
                         onTap: () {},
@@ -325,14 +312,6 @@ class _ProfilScreenState extends State<ProfilScreen> {
                           MaterialPageRoute(
                               builder: (_) => const MesTransactionsScreen()),
                         ),
-                      ),
-                      const Divider(
-                          color: AppColors.paleOak, height: 1, indent: 60),
-                      _buildMenuItem(
-                        icon: Icons.logout,
-                        label: 'Déconnexion',
-                        color: AppColors.primary,
-                        onTap: _deconnecter,
                       ),
                     ],
                   ),
@@ -404,6 +383,33 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   childCount: _annonces.length > 4
                       ? 4
                       : _annonces.length,
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.stackLg + 8)),
+
+            // ── Déconnexion ───────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.containerMargin),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    onPressed: _deconnecter,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      side: const BorderSide(
+                          color: AppColors.error, width: 1.5),
+                      shape: RoundedRectangleBorder(
+                          borderRadius:
+                          BorderRadius.circular(AppRadius.full)),
+                    ),
+                    icon: const Icon(Icons.logout, size: 18),
+                    label: const Text('Déconnexion'),
+                  ),
                 ),
               ),
             ),

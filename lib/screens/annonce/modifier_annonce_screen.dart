@@ -21,8 +21,11 @@ class _ModifierAnnonceScreenState extends State<ModifierAnnonceScreen> {
   late final TextEditingController _titreController;
   late final TextEditingController _descController;
   late final TextEditingController _prixController;
-  late final TextEditingController _villeController;
-  late final TextEditingController _quartierController;
+  // Ville/quartier ne sont plus modifiables ici (déduits du profil à la
+  // création) — on garde juste les valeurs déjà en base pour les renvoyer
+  // inchangées à l'enregistrement.
+  late final String _ville;
+  late final String _quartier;
 
   List<Map<String, dynamic>> _categories = [];
   int? _categorieId;
@@ -44,8 +47,8 @@ class _ModifierAnnonceScreenState extends State<ModifierAnnonceScreen> {
     _prixController = TextEditingController(
       text: (a['prix_actuel'] as num?)?.toStringAsFixed(0) ?? '',
     );
-    _villeController = TextEditingController(text: a['ville'] ?? '');
-    _quartierController = TextEditingController(text: a['quartier'] ?? '');
+    _ville = a['ville'] ?? 'Dakar';
+    _quartier = a['quartier'] ?? 'Dakar';
     _categorieId = a['categorie_id'] as int?;
 
     final imgs = (a['images_annonce'] as List<dynamic>? ?? [])
@@ -156,8 +159,8 @@ class _ModifierAnnonceScreenState extends State<ModifierAnnonceScreen> {
         description: _descController.text.trim(),
         prix: double.parse(_prixController.text.trim()),
         categorieId: _categorieId!,
-        ville: _villeController.text.trim(),
-        quartier: _quartierController.text.trim(),
+        ville: _ville,
+        quartier: _quartier,
       );
 
       if (mounted) {
@@ -233,33 +236,13 @@ class _ModifierAnnonceScreenState extends State<ModifierAnnonceScreen> {
               _buildCategorieDropdown(),
 
               const SizedBox(height: AppSpacing.stackLg),
-              _buildLabel('DESCRIPTION'),
+              _buildLabel('DESCRIPTION (OPTIONNEL)'),
               const SizedBox(height: AppSpacing.stackSm),
               _buildField(
                 controller: _descController,
                 hint:
                 'Décrivez l\'état de l\'objet, son utilisation, ses défauts...',
                 maxLines: 4,
-                validator: (v) =>
-                v == null || v.isEmpty ? 'Champ obligatoire' : null,
-              ),
-
-              const SizedBox(height: AppSpacing.stackLg),
-              _buildLabel('VILLE'),
-              const SizedBox(height: AppSpacing.stackSm),
-              _buildField(
-                controller: _villeController,
-                hint: 'Ex: Dakar',
-                validator: (v) =>
-                v == null || v.isEmpty ? 'Champ obligatoire' : null,
-              ),
-
-              const SizedBox(height: AppSpacing.stackLg),
-              _buildLabel('QUARTIER'),
-              const SizedBox(height: AppSpacing.stackSm),
-              _buildField(
-                controller: _quartierController,
-                hint: 'Ex: Plateau',
               ),
 
               const SizedBox(height: AppSpacing.stackLg + 8),

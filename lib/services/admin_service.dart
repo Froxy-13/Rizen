@@ -281,6 +281,53 @@ class AdminService {
     };
   }
 
+  /// Profil du SuperAdmin connecté
+  Future<Map<String, dynamic>?> getMonProfilAdmin() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return null;
+    final data = await _client
+        .from('profils')
+        .select()
+        .eq('id', userId)
+        .maybeSingle();
+    return data;
+  }
+
+  /// Vrai bilan d'activité de modération (pas des stats marchandes)
+  Future<Map<String, int>> getBilanModeration() async {
+    final signalementsTraites = await _client
+        .from('signalements')
+        .select('id')
+        .neq('statut', 'en_attente')
+        .count();
+
+    final litigesResolus = await _client
+        .from('transactions')
+        .select('id')
+        .not('motif_litige', 'is', null)
+        .neq('statut', 'litige')
+        .count();
+
+    final annoncesModerees = await _client
+        .from('annonces')
+        .select('id')
+        .eq('statut', 'suspendue')
+        .count();
+
+    final utilisateursSuspendus = await _client
+        .from('profils')
+        .select('id')
+        .eq('statut', 'suspendu')
+        .count();
+
+    return {
+      'signalementsTraites': signalementsTraites.count,
+      'litigesResolus': litigesResolus.count,
+      'annoncesModerees': annoncesModerees.count,
+      'utilisateursSuspendus': utilisateursSuspendus.count,
+    };
+  }
+
   /// Liste tous les signalements
   Future<List<Map<String, dynamic>>> getSignalements() async {
     final data = await _client

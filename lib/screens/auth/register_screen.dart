@@ -46,7 +46,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         texte.contains('failed host lookup') ||
         texte.contains('network is unreachable') ||
         texte.contains('connection failed') ||
-        texte.contains('clientexception');
+        texte.contains('connection reset') ||
+        texte.contains('connection refused') ||
+        texte.contains('clientexception') ||
+        texte.contains('authretryablefetchexception') ||
+        texte.contains('timeout') ||
+        texte.contains('xmlhttprequest');
   }
 
   Future<void> _inscription() async {
@@ -72,11 +77,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } on AuthException catch (e) {
       if (mounted) {
-        String message = 'Une erreur est survenue';
-        if (e.message.contains('already registered')) {
+        String message;
+        if (_estErreurReseau(e)) {
+          message = 'Aucune connexion à internet';
+        } else if (e.message.contains('already registered')) {
           message = 'Cet email est déjà utilisé';
         } else if (e.message.contains('Password should be')) {
           message = 'Le mot de passe doit contenir au moins 6 caractères';
+        } else {
+          message = 'Une erreur est survenue';
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

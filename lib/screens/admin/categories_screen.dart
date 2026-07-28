@@ -83,8 +83,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     final nouveauNom = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.lg)),
+        insetPadding:
+        const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         title: Text('Renommer la catégorie', style: AppTextStyles.titleMd),
         content: TextField(
           controller: controller,
@@ -98,21 +98,50 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             ),
           ),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler',
-                style: TextStyle(color: AppColors.rosyTaupe)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md)),
-            ),
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Enregistrer',
-                style: TextStyle(color: Colors.white)),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    foregroundColor: AppColors.rosyTaupe,
+                    side: const BorderSide(color: AppColors.paleOak),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                    ),
+                  ),
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('Annuler', maxLines: 1),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () =>
+                      Navigator.pop(ctx, controller.text.trim()),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                    ),
+                  ),
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('Enregistrer', maxLines: 1),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

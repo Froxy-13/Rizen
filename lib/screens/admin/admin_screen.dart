@@ -4,6 +4,8 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../services/admin_service.dart';
 import '../../theme/app_theme.dart';
 import 'categories_screen.dart';
+import 'admin_profil_screen.dart';
+import '../../widgets/confirmation_dialog.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -21,6 +23,10 @@ class _AdminScreenState extends State<AdminScreen> {
     _UtilisateursTab(service: _service),
     _AnnoncesTab(service: _service),
     _SignalementsTab(service: _service),
+    AdminProfilScreen(
+      service: _service,
+      onVoirSignalements: () => setState(() => _currentIndex = 3),
+    ),
   ];
 
   @override
@@ -70,6 +76,7 @@ class _AdminScreenState extends State<AdminScreen> {
       (icon: Icons.group_outlined, label: 'Users'),
       (icon: Icons.gavel_outlined, label: 'Annonces'),
       (icon: Icons.flag_outlined, label: 'Signal.'),
+      (icon: Icons.person_outline, label: 'Profil'),
     ];
 
     return Positioned(
@@ -636,11 +643,14 @@ class _SignalementsTab extends StatefulWidget {
   State<_SignalementsTab> createState() => _SignalementsTabState();
 }
 
+enum _FiltreTraitement { tous, nonTraites, traites }
+
 class _SignalementsTabState extends State<_SignalementsTab> {
   List<Map<String, dynamic>> _signalements = [];
   List<Map<String, dynamic>> _litiges = [];
   bool _loading = true;
   bool _vueLitiges = false;
+  _FiltreTraitement _filtre = _FiltreTraitement.tous;
 
   @override
   void initState() {
@@ -657,6 +667,32 @@ class _SignalementsTabState extends State<_SignalementsTab> {
       _litiges = litiges;
       _loading = false;
     });
+  }
+
+  List<Map<String, dynamic>> get _signalementsFiltres {
+    switch (_filtre) {
+      case _FiltreTraitement.nonTraites:
+        return _signalements
+            .where((s) => (s['statut'] ?? 'en_attente') == 'en_attente')
+            .toList();
+      case _FiltreTraitement.traites:
+        return _signalements
+            .where((s) => (s['statut'] ?? 'en_attente') != 'en_attente')
+            .toList();
+      case _FiltreTraitement.tous:
+        return _signalements;
+    }
+  }
+
+  List<Map<String, dynamic>> get _litigesFiltres {
+    switch (_filtre) {
+      case _FiltreTraitement.nonTraites:
+        return _litiges.where((l) => l['statut'] == 'litige').toList();
+      case _FiltreTraitement.traites:
+        return _litiges.where((l) => l['statut'] != 'litige').toList();
+      case _FiltreTraitement.tous:
+        return _litiges;
+    }
   }
 
   String _tempsEcoule(String? iso) {
@@ -718,7 +754,10 @@ class _SignalementsTabState extends State<_SignalementsTab> {
                       (s['statut'] ?? 'en_attente') == 'en_attente')
                           .length,
                       actif: !_vueLitiges,
-                      onTap: () => setState(() => _vueLitiges = false),
+                      onTap: () => setState(() {
+                        _vueLitiges = false;
+                        _filtre = _FiltreTraitement.tous;
+                      }),
                     ),
                   ),
                   Expanded(
@@ -728,16 +767,61 @@ class _SignalementsTabState extends State<_SignalementsTab> {
                           .where((l) => l['statut'] == 'litige')
                           .length,
                       actif: _vueLitiges,
-                      onTap: () => setState(() => _vueLitiges = true),
+                      onTap: () => setState(() {
+                        _vueLitiges = true;
+                        _filtre = _FiltreTraitement.tous;
+                      }),
                     ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: AppSpacing.stackMd),
+
+            // Filtre Traité / Non traité
+            Row(
+              children: _FiltreTraitement.values.map((f) {
+                final label = switch (f) {
+                  _FiltreTraitement.tous => 'Tous',
+                  _FiltreTraitement.nonTraites => 'Non traités',
+                  _FiltreTraitement.traites => 'Traités',
+                };
+                final selected = _filtre == f;
+                return Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.stackSm),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _filtre = f),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? AppColors.navy
+                            : AppColors.surface,
+                        borderRadius:
+                        BorderRadius.circular(AppRadius.full),
+                        boxShadow: selected ? null : AppShadows.card,
+                      ),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 13,
+                          fontWeight:
+                          selected ? FontWeight.w700 : FontWeight.w500,
+                          color:
+                          selected ? Colors.white : AppColors.navy,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
             const SizedBox(height: AppSpacing.stackLg + 8),
 
             if (_vueLitiges) ...[
-              if (_litiges.isEmpty)
+              if (_litigesFiltres.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 32),
                   child: Center(
@@ -746,7 +830,7 @@ class _SignalementsTabState extends State<_SignalementsTab> {
                         const Icon(Icons.balance_outlined,
                             size: 56, color: AppColors.paleOak),
                         const SizedBox(height: 12),
-                        Text('Aucun litige en cours',
+                        Text('Aucun litige dans cette catégorie',
                             style: AppTextStyles.bodyMd
                                 .copyWith(color: AppColors.rosyTaupe)),
                       ],
@@ -754,13 +838,13 @@ class _SignalementsTabState extends State<_SignalementsTab> {
                   ),
                 )
               else
-                ..._litiges.map((l) => Padding(
+                ..._litigesFiltres.map((l) => Padding(
                   padding:
                   const EdgeInsets.only(bottom: AppSpacing.stackMd),
                   child: _buildLitigeCard(l),
                 )),
             ] else ...[
-              if (_signalements.isEmpty)
+              if (_signalementsFiltres.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 32),
                   child: Center(
@@ -769,7 +853,7 @@ class _SignalementsTabState extends State<_SignalementsTab> {
                         const Icon(Icons.flag_outlined,
                             size: 56, color: AppColors.paleOak),
                         const SizedBox(height: 12),
-                        Text('Aucun signalement',
+                        Text('Aucun signalement dans cette catégorie',
                             style: AppTextStyles.bodyMd
                                 .copyWith(color: AppColors.rosyTaupe)),
                       ],
@@ -777,7 +861,7 @@ class _SignalementsTabState extends State<_SignalementsTab> {
                   ),
                 )
               else
-                ..._signalements.map((s) => Padding(
+                ..._signalementsFiltres.map((s) => Padding(
                   padding:
                   const EdgeInsets.only(bottom: AppSpacing.stackMd),
                   child: _buildReportCard(s),
@@ -1268,37 +1352,15 @@ class _SignalementsTabState extends State<_SignalementsTab> {
 
   Future<void> _resoudreLitige(Map<String, dynamic> litige,
       {required bool favorVendeur}) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.lg)),
-        title: Text(
-          favorVendeur ? 'Libérer les fonds ?' : 'Rembourser l\'acheteur ?',
-          style: AppTextStyles.titleMd,
-        ),
-        content: Text(
-          favorVendeur
-              ? 'Les fonds seront versés au vendeur et la transaction marquée terminée.'
-              : "L'acheteur sera remboursé et l'annonce repassera active.",
-          style: AppTextStyles.bodyMd,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor:
-              favorVendeur ? AppColors.emerald : AppColors.error,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Confirmer',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+    final confirm = await confirmerAction(
+      context,
+      titre: favorVendeur ? 'Libérer les fonds ?' : 'Rembourser l\'acheteur ?',
+      message: favorVendeur
+          ? 'Les fonds seront versés au vendeur et la transaction marquée terminée.'
+          : "L'acheteur sera remboursé et l'annonce repassera active.",
+      labelConfirmer: 'Confirmer',
+      couleurConfirmer:
+      favorVendeur ? AppColors.emerald : AppColors.error,
     );
 
     if (confirm == true) {
@@ -1426,28 +1488,13 @@ class _AnnoncesTabState extends State<_AnnoncesTab> {
   }
 
   Future<void> _supprimer(Map<String, dynamic> annonce) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.lg)),
-        title: const Text('Confirmer la suppression'),
-        content: Text(
-            'Supprimer définitivement "${annonce['titre']}" ? Cette action est irréversible.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            style:
-            ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () => Navigator.pop(ctx, true),
-            child:
-            const Text('Supprimer', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+    final confirm = await confirmerAction(
+      context,
+      titre: 'Confirmer la suppression',
+      message:
+      'Supprimer définitivement "${annonce['titre']}" ? Cette action est irréversible.',
+      labelConfirmer: 'Supprimer',
+      destructif: true,
     );
     if (confirm == true) {
       await widget.service.supprimerAnnonce(annonce['id'] as int);
@@ -1942,28 +1989,13 @@ class _UtilisateursTabState extends State<_UtilisateursTab> {
   }
 
   Future<void> _confirmerSuppression(Map<String, dynamic> user) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.lg)),
-        title: const Text('Confirmer la suppression'),
-        content: Text(
-            'Supprimer définitivement ${user['prenom']} ${user['nom']} ? Cette action est irréversible.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            style:
-            ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () => Navigator.pop(ctx, true),
-            child:
-            const Text('Supprimer', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+    final confirm = await confirmerAction(
+      context,
+      titre: 'Confirmer la suppression',
+      message:
+      'Supprimer définitivement ${user['prenom']} ${user['nom']} ? Cette action est irréversible.',
+      labelConfirmer: 'Supprimer',
+      destructif: true,
     );
     if (confirm == true) {
       await widget.service.supprimerUtilisateur(user['id'] as String);
