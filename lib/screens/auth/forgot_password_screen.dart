@@ -173,15 +173,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
         // Logo bas de page
         Center(
-          child: Text(
-            'RIZEN',
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.paleOak,
-              letterSpacing: 4,
-            ),
+          child: Image.asset(
+            'assets/images/Rizen.png',
+            height: 50,
+            fit: BoxFit.contain,
           ),
         ),
         const SizedBox(height: 24),

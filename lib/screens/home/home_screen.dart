@@ -133,7 +133,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Rizen', style: AppTextStyles.displayMd),
+                      Image.asset(
+                        'assets/images/Rizen.png',
+                        height: 45,
+                        fit: BoxFit.contain,
+                      ),
                       const SizedBox(height: AppSpacing.stackMd),
 
                       // Search bar — blanc pur, sans bordure, ombre douce

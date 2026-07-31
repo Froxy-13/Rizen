@@ -370,14 +370,7 @@ class _AdminProfilScreenState extends State<AdminProfilScreen> {
                   ),
                   child: Column(
                     children: [
-                      _buildMenuItem(
-                        icon: Icons.notifications_none,
-                        label: 'Signalements en attente',
-                        sousTitre: 'Voir les alertes à traiter',
-                        onTap: widget.onVoirSignalements,
-                      ),
-                      const Divider(
-                          color: AppColors.paleOak, height: 1, indent: 60),
+                      // Notifications / signalements moved out — no direct menu item
                       _buildMenuItem(
                         icon: Icons.info_outline,
                         label: 'À propos de la plateforme',

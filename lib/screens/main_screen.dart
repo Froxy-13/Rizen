@@ -3,8 +3,7 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import '../services/message_service.dart';
-import '../services/notification_service.dart';
-import 'notifications/notifications_screen.dart';
+// ...existing code... (notification UI removed)
 import 'home/home_screen.dart';
 import 'decouvrir/decouvrir_screen.dart';
 import 'annonce/creer_annonce_screen.dart';
@@ -25,10 +24,8 @@ class _MainScreenState extends State<MainScreen> {
   bool _estSuperAdmin = false;
   bool _chargementRole = true;
   int _nombreNonLus = 0;
-  int _nombreNotifsNonLues = 0;
   Timer? _timerBadge;
   final _messageService = MessageService();
-  final _notificationService = NotificationService();
 
   // Dimensions de la nav — le bouton "+" dépasse au-dessus de la barre
   static const double _barHeight = 62;
@@ -49,15 +46,11 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     _verifierRole();
     _chargerNonLus();
-    _chargerNotifs();
     // Rafraîchit les badges périodiquement pour capter les nouveaux messages
     // et notifications reçus pendant que l'utilisateur est sur un autre onglet.
     _timerBadge = Timer.periodic(
       const Duration(seconds: 10),
-          (_) {
-        _chargerNonLus();
-        _chargerNotifs();
-      },
+          (_) => _chargerNonLus(),
     );
   }
 
@@ -76,14 +69,7 @@ class _MainScreenState extends State<MainScreen> {
     } catch (_) {}
   }
 
-  Future<void> _chargerNotifs() async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
-    if (userId == null) return;
-    try {
-      final nombre = await _notificationService.getNombreNonLues(userId);
-      if (mounted) setState(() => _nombreNotifsNonLues = nombre);
-    } catch (_) {}
-  }
+  // Notifications UI and logic removed (no business logic implemented)
 
   Future<void> _verifierRole() async {
     final userId = Supabase.instance.client.auth.currentUser?.id;
@@ -122,74 +108,15 @@ class _MainScreenState extends State<MainScreen> {
     // Interface utilisateur normale
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Stack(
+          body: Stack(
         children: [
           _pages[_currentIndex],
           _buildFloatingNav(),
-          _buildCloche(),
         ],
       ),
     );
   }
-
-  // ── Cloche notifications flottante — visible sur tous les onglets ──
-  Widget _buildCloche() {
-    return Positioned(
-      top: MediaQuery.of(context).padding.top + 12,
-      right: 20,
-      child: GestureDetector(
-        onTap: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-          );
-          _chargerNotifs();
-        },
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            shape: BoxShape.circle,
-            boxShadow: AppShadows.card,
-          ),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const Icon(Icons.notifications_none,
-                  color: AppColors.navy, size: 22),
-              if (_nombreNotifsNonLues > 0)
-                Positioned(
-                  top: -4,
-                  right: -4,
-                  child: Container(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    constraints: const BoxConstraints(minWidth: 16),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(AppRadius.full),
-                      border:
-                      Border.all(color: AppColors.surface, width: 1.5),
-                    ),
-                    child: Text(
-                      _nombreNotifsNonLues > 9
-                          ? '9+'
-                          : '$_nombreNotifsNonLues',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  
 
   // ── Bottom nav flottante — pilule navy + bouton "+" surélevé ──
   Widget _buildFloatingNav() {

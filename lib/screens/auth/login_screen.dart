@@ -165,16 +165,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 Center(
                   child: Column(
                     children: [
-                      Text(
-                        'Rizen',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 36,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.onSurface,
-                        ),
+                      Image.asset(
+                        'assets/images/Rizen.png',
+                        height: 80,
+                        fit: BoxFit.contain,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 16),
                       Text(
                         'Bienvenue sur Rizen',
                         style: TextStyle(
