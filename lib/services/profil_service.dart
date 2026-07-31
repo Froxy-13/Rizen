@@ -84,6 +84,20 @@ class ProfilService {
     }).eq('id', userId);
   }
 
+  /// Supprime définitivement le compte de l'utilisateur connecté
+  /// (ligne profils — cascade sur annonces/avis/etc. selon tes FK).
+  /// Ne supprime PAS le compte Auth Supabase lui-même : ça nécessite
+  /// les droits admin (clé service_role), impossibles à exposer côté
+  /// app mobile. Si tu veux la suppression complète de l'auth, il
+  /// faudra une Edge Function dédiée appelée avec la session utilisateur.
+  Future<void> supprimerMonCompte() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    await _client.from('profils').delete().eq('id', userId);
+    await _client.auth.signOut();
+  }
+
   Future<void> deconnecter() async {
     await _client.auth.signOut();
   }

@@ -145,22 +145,15 @@ class TransactionService {
   }
 
   /// Acheteur confirme la réception (paiement mobile)
-  /// ou vendeur confirme réception du liquide
+  /// ou vendeur confirme réception du liquide.
+  /// Passe par une fonction RPC (SECURITY DEFINER) plutôt que des
+  /// updates directs, pour éviter les blocages RLS silencieux sur
+  /// des lignes qui n'appartiennent pas à l'appelant (ex: l'acheteur
+  /// qui doit marquer l'annonce du vendeur comme "vendue").
   Future<void> confirmerReception(int transactionId, int annonceId) async {
-    await _client
-        .from('transactions')
-        .update({'statut': 'completee'})
-        .eq('id', transactionId);
-
-    await _client
-        .from('paiements')
-        .update({'statut': 'libere'})
-        .eq('transaction_id', transactionId);
-
-    await _client
-        .from('annonces')
-        .update({'statut': 'vendue'})
-        .eq('id', annonceId);
+    await _client.rpc('confirmer_reception_transaction', params: {
+      'p_transaction_id': transactionId,
+    });
   }
 
   /// Ouvrir un litige — le motif est maintenant obligatoire pour que

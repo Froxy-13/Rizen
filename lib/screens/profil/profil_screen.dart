@@ -11,6 +11,7 @@ import 'mes_annonces_screen.dart';
 import 'mes_transactions_screen.dart';
 import '../../widgets/confirmation_dialog.dart';
 import 'changer_mot_de_passe_screen.dart';
+import 'parametres_screen.dart';
 
 class ProfilScreen extends StatefulWidget {
   const ProfilScreen({super.key});
@@ -300,7 +301,11 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       _buildMenuItem(
                         icon: Icons.settings_outlined,
                         label: 'Paramètres',
-                        onTap: () {},
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ParametresScreen()),
+                        ),
                       ),
                       const Divider(
                           color: AppColors.paleOak, height: 1, indent: 60),

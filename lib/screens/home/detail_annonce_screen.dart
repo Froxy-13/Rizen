@@ -425,7 +425,7 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                     const SizedBox(height: AppSpacing.stackLg),
 
                     // ── Bandeau "Vendu" ──────────────────────
-                    if (estVendue && !estVendeur) ...[
+                    if (estVendue) ...[
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(
