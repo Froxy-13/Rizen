@@ -197,7 +197,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
               // ── Filtres ─────────────────────────────────
               SliverToBoxAdapter(
                 child: SizedBox(
-                  height: 52,
+                  height: 55,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(

@@ -378,6 +378,7 @@ class _AdminProfilScreenState extends State<AdminProfilScreen> {
                       ),
                     ],
                   ),
+
                 ),
 
                 const SizedBox(height: AppSpacing.stackLg + 8),

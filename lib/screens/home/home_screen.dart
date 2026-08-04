@@ -50,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _charger() async {
     setState(() => _loading = true);
     try {
-      final annonces = await _service.getAnnonces();
+      final annonces = await _service.getAnnoncesRecentes();
       final topVendeurs = await _service.getTopVendeurs();
       final userId = Supabase.instance.client.auth.currentUser?.id;
       final favoris = userId != null
@@ -253,7 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisCount: 2,
                     crossAxisSpacing: AppSpacing.gutter,
                     mainAxisSpacing: AppSpacing.gutter,
-                    childAspectRatio: 0.68,
+                    childAspectRatio: 0.60,
                   ),
                   delegate: SliverChildBuilderDelegate(
                         (context, index) =>
@@ -384,7 +384,8 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Image
-            Expanded(
+            SizedBox(
+              height: 135, // ← hauteur fixe pour l'image
               child: Stack(
                 children: [
                   ClipRRect(
@@ -395,6 +396,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ? CachedNetworkImage(
                       imageUrl: imageUrl,
                       width: double.infinity,
+                      height: 135, // ← même valeur ici
                       fit: BoxFit.cover,
                       placeholder: (_, __) => Container(
                         color: AppColors.softBlush,

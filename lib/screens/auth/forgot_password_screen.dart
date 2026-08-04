@@ -45,8 +45,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: _emailEnvoye ? _buildSuccess() : _buildForm(),
         ),
@@ -100,7 +101,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
         const SizedBox(height: 24),
 
-        // Image placeholder — remplace 'assets/images/forgot_password.png' par ton image
+        // Image
         ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: Image.asset(
@@ -169,7 +170,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               : const Text('Envoyer le lien'),
         ),
 
-        const Spacer(),
+        const SizedBox(height: 40),
 
         // Logo bas de page
         Center(
@@ -188,6 +189,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        const SizedBox(height: 80),
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(

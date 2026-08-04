@@ -376,7 +376,7 @@ class _PaiementScreenState extends State<PaiementScreen> {
               _estLiquide
                   ? 'Le montant sera remis en espèces au livreur. La '
                   'transaction sera confirmée par le vendeur à réception.'
-                  : 'Le paiement sera simulé et placé en séquestre '
+                  : 'Le paiement sera placé en séquestre '
                   'jusqu\'à confirmation de réception.',
               style: AppTextStyles.bodySm.copyWith(
                 color: AppColors.primary,
@@ -544,7 +544,16 @@ class _SuiviTransactionScreenState extends State<SuiviTransactionScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg)),
-        title: Text('Ouvrir un litige', style: AppTextStyles.titleMd),
+        titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 0),
+        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        title: Text(
+          'Ouvrir un litige',
+          style: AppTextStyles.titleMd.copyWith(
+            fontSize: 20,
+            height: 1.2,
+          ),
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -552,9 +561,12 @@ class _SuiviTransactionScreenState extends State<SuiviTransactionScreen> {
             children: [
               Text(
                 'Expliquez le problème rencontré — ce motif sera transmis à Rizen pour traitement.',
-                style: AppTextStyles.bodySm,
+                style: AppTextStyles.bodySm.copyWith(
+                  fontSize: 14,
+                  height: 1.6,
+                ),
               ),
-              const SizedBox(height: AppSpacing.stackMd),
+              const SizedBox(height: 16),
               TextField(
                 controller: controller,
                 autofocus: true,
@@ -567,6 +579,10 @@ class _SuiviTransactionScreenState extends State<SuiviTransactionScreen> {
                   ),
                   filled: true,
                   fillColor: AppColors.surface,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
                     borderSide: BorderSide.none,
@@ -577,20 +593,72 @@ class _SuiviTransactionScreenState extends State<SuiviTransactionScreen> {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler',
-                style: TextStyle(color: AppColors.rosyTaupe)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.rosyTaupe,
+                        side: const BorderSide(
+                          color: AppColors.rosyTaupe,
+                          width: 1.2,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.full),
+                        ),
+                      ),
+                      child: const Text(
+                        'Annuler',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          height: 1.1,
+                        ),
+                        maxLines: 1,
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade600,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.full),
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+                      child: const Text(
+                        'Ouvrir le litige',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          height: 1.05,
+                        ),
+                        maxLines: 2,
+                        textAlign: TextAlign.center,
+                        softWrap: true,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Ouvrir le litige',
-                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

@@ -52,12 +52,9 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
         final ids = await _service.getFavorisIds(userId);
         favori = ids.contains(widget.annonceId);
 
-        // Prix négocié pour l'acheteur
-        final negAcheteur =
-        await _service.getMesNegociationsAcceptees(userId);
+        final negAcheteur = await _service.getMesNegociationsAcceptees(userId);
         prixNegocie = negAcheteur[widget.annonceId];
 
-        // Prix négociés pour le vendeur (si c'est son annonce)
         if (vendeurId == userId) {
           final negVendeur =
           await _service.getNegociationsAccepteesVendeur(userId);
@@ -116,15 +113,14 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
             children: [
               DropdownButtonFormField<String>(
                 value: raisonSelectionnee,
-                hint: Text('Choisir une raison',
-                    style: AppTextStyles.bodySm),
+                hint: Text('Choisir une raison', style: AppTextStyles.bodySm),
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
                     borderSide: const BorderSide(color: AppColors.paleOak),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
+                  contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
                 items: [
                   'Contenu inapproprié',
@@ -135,9 +131,7 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                 ]
                     .map((r) => DropdownMenuItem(
                     value: r,
-                    child: Text(r,
-                        style:
-                        const TextStyle(fontSize: 13))))
+                    child: Text(r, style: const TextStyle(fontSize: 13))))
                     .toList(),
                 onChanged: (v) =>
                     setStateDialog(() => raisonSelectionnee = v),
@@ -160,46 +154,57 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
             ],
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Annuler',
-                  style: TextStyle(color: AppColors.rosyTaupe)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.navy,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md)),
-              ),
-              onPressed: raisonSelectionnee == null
-                  ? null
-                  : () async {
-                Navigator.pop(ctx);
-                try {
-                  await _service.signalerAnnonce(
-                    annonceId: widget.annonceId,
-                    userId: userId,
-                    raison: raisonSelectionnee!,
-                    description: descController.text.isEmpty
+            Row(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text('Annuler',
+                        style: TextStyle(color: AppColors.rosyTaupe)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.navy,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md)),
+                    ),
+                    onPressed: raisonSelectionnee == null
                         ? null
-                        : descController.text,
-                  );
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Signalement envoyé')),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Erreur : $e')),
-                    );
-                  }
-                }
-              },
-              child: const Text('Envoyer',
-                  style: TextStyle(color: Colors.white)),
+                        : () async {
+                      Navigator.pop(ctx);
+                      try {
+                        await _service.signalerAnnonce(
+                          annonceId: widget.annonceId,
+                          userId: userId,
+                          raison: raisonSelectionnee!,
+                          description: descController.text.isEmpty
+                              ? null
+                              : descController.text,
+                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Signalement envoyé')),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Erreur : $e')),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text('Envoyer',
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -211,8 +216,8 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        body: Center(
-            child: CircularProgressIndicator(color: AppColors.primary)),
+        body:
+        Center(child: CircularProgressIndicator(color: AppColors.primary)),
       );
     }
 
@@ -233,8 +238,7 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
     final prix = (_data!['prix_actuel'] as num).toDouble();
     final ville = _data!['ville'] as String?;
     final quartier = _data!['quartier'] as String?;
-    final localisation =
-    [quartier, ville].where((e) => e != null).join(', ');
+    final localisation = [quartier, ville].where((e) => e != null).join(', ');
     final estVendeur = _data!['utilisateur_id'] ==
         Supabase.instance.client.auth.currentUser?.id;
     final estVendue = _data!['statut'] == 'vendue';
@@ -320,23 +324,21 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                       left: 0,
                       right: 0,
                       child: Row(
-                        mainAxisAlignment:
-                        MainAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(
                           images.length,
                               (i) => AnimatedContainer(
-                            duration:
-                            const Duration(milliseconds: 200),
-                            margin: const EdgeInsets.symmetric(
-                                horizontal: 3),
+                            duration: const Duration(milliseconds: 200),
+                            margin:
+                            const EdgeInsets.symmetric(horizontal: 3),
                             width: _photoIndex == i ? 20 : 6,
                             height: 6,
                             decoration: BoxDecoration(
                               color: _photoIndex == i
                                   ? Colors.white
                                   : Colors.white.withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(
-                                  AppRadius.full),
+                              borderRadius:
+                              BorderRadius.circular(AppRadius.full),
                             ),
                           ),
                         ),
@@ -347,25 +349,22 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
             ),
           ),
 
-          // ── Sheet contenu (remonte légèrement sur l'image) ──
+          // ── Sheet contenu ──
           SliverToBoxAdapter(
             child: Transform.translate(
               offset: const Offset(0, -24),
               child: Container(
                 decoration: const BoxDecoration(
                   color: AppColors.background,
-                  borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(AppRadius.xl)),
+                  borderRadius:
+                  BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
                 ),
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 140),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Titre + catégorie
-                    Text(
-                      _data!['titre'],
-                      style: AppTextStyles.headlineSm,
-                    ),
+                    Text(_data!['titre'], style: AppTextStyles.headlineSm),
                     if (categorie != null) ...[
                       const SizedBox(height: 4),
                       Text(
@@ -375,7 +374,7 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                     ],
                     const SizedBox(height: 10),
 
-                    // Prix — logique acheteur vs vendeur
+                    // Prix
                     if (_prixNegocie != null) ...[
                       Text(
                         '${prix.toStringAsFixed(0)} FCFA',
@@ -424,7 +423,7 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
 
                     const SizedBox(height: AppSpacing.stackLg),
 
-                    // ── Bandeau "Vendu" ──────────────────────
+                    // Bandeau vendu
                     if (estVendue) ...[
                       Container(
                         width: double.infinity,
@@ -432,8 +431,7 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                             horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
                           color: AppColors.navy,
-                          borderRadius:
-                          BorderRadius.circular(AppRadius.md),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -441,9 +439,9 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                             const Icon(Icons.check_circle,
                                 color: Colors.white, size: 16),
                             const SizedBox(width: 8),
-                            Text(
+                            const Text(
                               'Cet article a déjà été vendu',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: AppTextStyles.fontFamily,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,
@@ -456,13 +454,12 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                       const SizedBox(height: AppSpacing.stackLg),
                     ],
 
-                    // ── Carte vendeur ──────────────────────
+                    // ── Carte vendeur CORRIGÉE ──
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        borderRadius:
-                        BorderRadius.circular(AppRadius.xl),
+                        borderRadius: BorderRadius.circular(AppRadius.xl),
                         boxShadow: AppShadows.card,
                       ),
                       child: Row(
@@ -479,27 +476,31 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                                 : null,
                           ),
                           const SizedBox(width: 14),
+                          // ← flex 3 : nom vendeur
                           Expanded(
+                            flex: 3,
                             child: Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   vendeurNom,
                                   style: AppTextStyles.titleMd,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 if (localisation.isNotEmpty) ...[
                                   const SizedBox(height: 2),
                                   Row(
                                     children: [
-                                      const Icon(
-                                          Icons.location_on_outlined,
+                                      const Icon(Icons.location_on_outlined,
                                           size: 13,
                                           color: AppColors.rosyTaupe),
                                       const SizedBox(width: 3),
-                                      Text(
-                                        localisation,
-                                        style: AppTextStyles.bodySm,
+                                      Expanded(
+                                        child: Text(
+                                          localisation,
+                                          style: AppTextStyles.bodySm,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -507,34 +508,40 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                               ],
                             ),
                           ),
-                          Column(
-                            crossAxisAlignment:
-                            CrossAxisAlignment.end,
-                            children: [
-                              if (noteMoyenne != null) ...[
-                                Row(
-                                  children: [
-                                    const Icon(Icons.star,
-                                        color: Color(0xFFFFB800),
-                                        size: 15),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      noteMoyenne.toStringAsFixed(1),
-                                      style: AppTextStyles.titleMd
-                                          .copyWith(fontSize: 14),
-                                    ),
-                                  ],
-                                ),
-                                Text(
-                                  '$nombreAvis AVIS',
-                                  style: AppTextStyles.labelCaps,
-                                ),
-                              ] else
-                                Text(
-                                  'Nouveau',
-                                  style: AppTextStyles.bodySm,
-                                ),
-                            ],
+                          const SizedBox(width: 8),
+                          // ← flex 2 : note/nouveau
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                if (noteMoyenne != null) ...[
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      const Icon(Icons.star,
+                                          color: Color(0xFFFFB800), size: 15),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        noteMoyenne.toStringAsFixed(1),
+                                        style: AppTextStyles.titleMd
+                                            .copyWith(fontSize: 14),
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                    '$nombreAvis AVIS',
+                                    style: AppTextStyles.labelCaps,
+                                    textAlign: TextAlign.end,
+                                  ),
+                                ] else
+                                  Text(
+                                    'Nouveau',
+                                    style: AppTextStyles.bodySm,
+                                    textAlign: TextAlign.end,
+                                  ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -542,16 +549,16 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
 
                     const SizedBox(height: AppSpacing.stackLg),
 
-                    // ── Détails dépliables ──────────────────
+                    // Détails dépliables
                     GestureDetector(
-                      onTap: () => setState(
-                              () => _detailsOuverts = !_detailsOuverts),
+                      onTap: () =>
+                          setState(() => _detailsOuverts = !_detailsOuverts),
                       child: Column(
                         children: [
                           const Divider(color: AppColors.paleOak),
                           Padding(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 14),
+                            padding:
+                            const EdgeInsets.symmetric(vertical: 14),
                             child: Row(
                               mainAxisAlignment:
                               MainAxisAlignment.spaceBetween,
@@ -572,8 +579,7 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                               padding: const EdgeInsets.only(
                                   bottom: AppSpacing.stackMd),
                               child: Column(
-                                crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     'Description',
@@ -583,16 +589,15 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                                   const SizedBox(height: 8),
                                   Text(
                                     _data!['description'] ?? '',
-                                    style: AppTextStyles.bodyMd
-                                        .copyWith(height: 1.5),
+                                    style:
+                                    AppTextStyles.bodyMd.copyWith(height: 1.5),
                                   ),
                                   const SizedBox(height: 14),
                                   if (categorie != null)
-                                    _buildDetailRow('Catégorie',
-                                        categorie['nom'] as String),
-                                  if (localisation.isNotEmpty)
                                     _buildDetailRow(
-                                        'Localisation', localisation),
+                                        'Catégorie', categorie['nom'] as String),
+                                  if (localisation.isNotEmpty)
+                                    _buildDetailRow('Localisation', localisation),
                                 ],
                               ),
                             ),
@@ -604,13 +609,12 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
 
                     const SizedBox(height: AppSpacing.stackLg),
 
-                    // ── Conseil sécurité ─────────────────────
+                    // Conseil sécurité
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withOpacity(0.06),
-                        borderRadius:
-                        BorderRadius.circular(AppRadius.lg),
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -620,22 +624,18 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   'Conseil de sécurité Rizen',
-                                  style: AppTextStyles.titleMd
-                                      .copyWith(fontSize: 14),
+                                  style:
+                                  AppTextStyles.titleMd.copyWith(fontSize: 14),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Rencontrez toujours le vendeur dans '
-                                      'un lieu public et vérifiez l\'article '
-                                      'avant de payer.',
-                                  style: AppTextStyles.bodySm.copyWith(
-                                    height: 1.4,
-                                  ),
+                                  'Rencontrez toujours le vendeur dans un lieu public et vérifiez l\'article avant de payer.',
+                                  style:
+                                  AppTextStyles.bodySm.copyWith(height: 1.4),
                                 ),
                               ],
                             ),
@@ -651,13 +651,13 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
         ],
       ),
 
-      // ── Barre d'action bas de page ─────────────────
+      // Barre d'action bas de page
       bottomNavigationBar: Container(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
         decoration: BoxDecoration(
           color: AppColors.background,
-          borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(AppRadius.xl)),
+          borderRadius:
+          const BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
           boxShadow: [
             BoxShadow(
               color: AppColors.navy.withOpacity(0.08),
@@ -675,7 +675,6 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
     );
   }
 
-  // ── Barre d'action quand l'annonce est déjà vendue (côté acheteur) ──
   Widget _buildBarreVendue() {
     return SizedBox(
       width: double.infinity,
@@ -703,7 +702,6 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
     );
   }
 
-  // ── Barre d'action côté vendeur : juste "Modifier" ──
   Widget _buildBarreVendeur() {
     return Row(
       children: [
@@ -718,9 +716,7 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                     builder: (_) => ModifierAnnonceScreen(annonce: _data!),
                   ),
                 );
-                if (modifie == true) {
-                  _charger();
-                }
+                if (modifie == true) _charger();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
@@ -798,12 +794,10 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
     }
   }
 
-  // ── Barre d'action côté acheteur : Message / Négocier / Acheter ──
   Widget _buildBarreAcheteur(double prix, List<String> images) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Message + Négocier
         Row(
           children: [
             Expanded(
@@ -814,8 +808,7 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                   if (exigerConnexion(context)) return;
                   final userId =
                       Supabase.instance.client.auth.currentUser!.id;
-                  final vendeurId =
-                  _data!['utilisateur_id'] as String;
+                  final vendeurId = _data!['utilisateur_id'] as String;
                   if (vendeurId == userId) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -838,9 +831,8 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                         builder: (_) => ChatScreen(
                           conversationId: convId,
                           annonceTitre: _data!['titre'],
-                          annonceImageUrl: images.isNotEmpty
-                              ? images.first
-                              : null,
+                          annonceImageUrl:
+                          images.isNotEmpty ? images.first : null,
                         ),
                       ),
                     );
@@ -857,8 +849,7 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
                   if (exigerConnexion(context)) return;
                   final userId =
                       Supabase.instance.client.auth.currentUser!.id;
-                  final vendeurId =
-                  _data!['utilisateur_id'] as String;
+                  final vendeurId = _data!['utilisateur_id'] as String;
                   if (vendeurId == userId) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -885,16 +876,13 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
           ],
         ),
         const SizedBox(height: 12),
-
-        // Acheter (pleine largeur)
         SizedBox(
           width: double.infinity,
           height: 56,
           child: ElevatedButton.icon(
             onPressed: () async {
               if (exigerConnexion(context)) return;
-              final userId =
-                  Supabase.instance.client.auth.currentUser!.id;
+              final userId = Supabase.instance.client.auth.currentUser!.id;
               final vendeurId = _data!['utilisateur_id'] as String;
               if (vendeurId == userId) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -965,13 +953,10 @@ class _DetailAnnonceScreenState extends State<DetailAnnonceScreen> {
           SizedBox(
             width: 100,
             child: Text(label,
-                style: AppTextStyles.bodySm.copyWith(
-                  color: AppColors.rosyTaupe,
-                )),
+                style:
+                AppTextStyles.bodySm.copyWith(color: AppColors.rosyTaupe)),
           ),
-          Expanded(
-            child: Text(valeur, style: AppTextStyles.bodyMd),
-          ),
+          Expanded(child: Text(valeur, style: AppTextStyles.bodyMd)),
         ],
       ),
     );

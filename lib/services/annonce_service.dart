@@ -26,6 +26,17 @@ class AnnonceService {
     return data.map((e) => Annonce.fromMap(e)).toList();
   }
 
+  Future<List<Annonce>> getAnnoncesRecentes({int limite = 4}) async {
+    final data = await _client
+        .from('annonces')
+        .select('*, images_annonce(url_image, ordre)')
+        .eq('statut', 'active')
+        .order('date_publication', ascending: false)
+        .limit(limite);
+
+    return data.map((e) => Annonce.fromMap(e)).toList();
+  }
+
   Future<List<Map<String, dynamic>>> getCategories() async {
     final data = await _client
         .from('categories')

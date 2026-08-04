@@ -29,15 +29,16 @@ class _AdminScreenState extends State<AdminScreen> {
     ),
   ];
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          _pages[_currentIndex],
-          _buildBottomNav(),
-          if (_currentIndex == 0)
+   @override
+   Widget build(BuildContext context) {
+     return Scaffold(
+       backgroundColor: AppColors.background,
+       resizeToAvoidBottomInset: false,
+       body: Stack(
+         children: [
+           _pages[_currentIndex],
+           _buildBottomNav(),
+           if (_currentIndex == 0)
             Positioned(
               bottom: 92,
               right: 20,
