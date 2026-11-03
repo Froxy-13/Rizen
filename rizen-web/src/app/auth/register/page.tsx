@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 // ── Barre de force du mot de passe ──────────────────────────────────
@@ -55,6 +55,8 @@ function PasswordStrength({ password }: { password: string }) {
 // ── Page principale ──────────────────────────────────────────────────
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/feed";
   const [form, setForm] = useState({
     prenom: "", nom: "", email: "", telephone: "", adresse: "", password: "",
   });
@@ -105,7 +107,7 @@ export default function RegisterPage() {
         },
       });
       if (error) throw error;
-      router.push("/decouvrir");
+      router.push(redirectTo);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Erreur lors de l'inscription.");
     } finally {
@@ -116,7 +118,7 @@ export default function RegisterPage() {
   const handleGoogle = async () => {
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/decouvrir` },
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}` },
     });
   };
 
@@ -130,7 +132,7 @@ export default function RegisterPage() {
         {/* ── Panneau gauche ── */}
         <div
           ref={leftRef}
-          className="relative w-full lg:w-[40%] bg-on-secondary-fixed p-8 lg:p-14 flex flex-col justify-between overflow-hidden"
+          className="relative hidden lg:flex lg:w-[40%] bg-on-secondary-fixed p-8 lg:p-14 flex-col justify-between overflow-hidden"
         >
           {/* Blobs ambiants parallaxe */}
           <div

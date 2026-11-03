@@ -105,18 +105,19 @@ export default async function HomePage() {
               <a href="#comment-ca-marche" className="font-label-lg text-label-lg text-secondary-fixed-dim hover:text-on-secondary transition-colors">Comment ça marche</a>
             </nav>
           </div>
-          <div className="flex items-center gap-space-md">
+          <div className="flex items-center gap-2 sm:gap-space-md">
             <Link
               href="/auth/login"
-              className="hidden sm:inline-flex items-center justify-center px-space-md py-space-sm rounded-full font-label-lg text-label-lg text-on-secondary hover:bg-secondary-container/20 transition-all"
+              className="inline-flex items-center justify-center px-3 sm:px-space-md py-space-sm rounded-full font-label-lg text-label-lg text-on-secondary hover:bg-secondary-container/20 transition-all text-sm"
             >
               Se connecter
             </Link>
             <Link
               href="/auth/register"
-              className="inline-flex items-center justify-center px-space-lg py-space-sm h-[44px] rounded-full bg-primary-container text-white font-label-lg text-label-lg shadow-[0_8px_24px_rgba(252,113,56,0.25)] hover:bg-[#e45f28] transition-all active:scale-95"
+              className="inline-flex items-center justify-center px-3 sm:px-space-lg py-space-sm h-[40px] sm:h-[44px] rounded-full bg-primary-container text-white font-label-lg text-label-lg shadow-[0_8px_24px_rgba(252,113,56,0.25)] hover:bg-[#e45f28] transition-all active:scale-95 text-sm"
             >
-              Publier une annonce
+              <span className="sm:hidden">S&apos;inscrire</span>
+              <span className="hidden sm:inline">Publier une annonce</span>
             </Link>
           </div>
         </div>
@@ -149,7 +150,7 @@ export default async function HomePage() {
                   payez en toute sécurité avec Wave ou Orange Money, et embrassez la Teranga digitale.
                 </p>
 
-                <div className="flex flex-wrap items-center gap-4 pt-2 w-full sm:w-auto">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 pt-2 w-full sm:w-auto">
                   <Link
                     href="/decouvrir"
                     className="h-[52px] px-8 rounded-full bg-primary-container text-white font-label-lg text-label-lg inline-flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(252,113,56,0.28)] hover:bg-[#e45f28] transition-all transform hover:-translate-y-0.5"

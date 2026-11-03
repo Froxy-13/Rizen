@@ -3,11 +3,13 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/feed";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -37,7 +39,7 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      router.push("/decouvrir");
+      router.push(redirectTo);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erreur de connexion";
       setError(msg === "Invalid login credentials" ? "Email ou mot de passe incorrect." : msg);
@@ -49,7 +51,7 @@ export default function LoginPage() {
   const handleGoogle = async () => {
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/decouvrir` },
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}` },
     });
   };
 
@@ -60,10 +62,10 @@ export default function LoginPage() {
     <div className="min-h-screen bg-surface flex items-center justify-center p-4 md:p-8 lg:p-12">
       <div className="w-full max-w-6xl overflow-hidden rounded-[2rem] shadow-2xl flex flex-col lg:flex-row">
 
-        {/* ── Panneau gauche ── */}
+        {/* ── Panneau gauche — caché sur mobile ── */}
         <aside
           ref={leftRef}
-          className="relative w-full lg:w-5/12 bg-on-secondary-fixed p-8 lg:p-12 flex flex-col justify-between overflow-hidden"
+          className="relative hidden lg:flex lg:w-5/12 bg-on-secondary-fixed p-8 lg:p-12 flex-col justify-between overflow-hidden"
         >
           {/* Blobs ambiants parallaxe */}
           <div

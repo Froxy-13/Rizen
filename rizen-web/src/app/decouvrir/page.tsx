@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
+import { NavbarDecouvrir } from "@/components/layout/NavbarDecouvrir";
 
 // ─── Constants ────────────────────────────────────────────────────────
 const PAGE_SIZE = 12;
@@ -235,11 +236,11 @@ export default function DecouvrirPage() {
   );
 
   const loadAnnonces = useCallback(
-    async (f: Filters, currentSort: string, append = false) => {
+    async (f: Filters, currentSort: string, append = false, startOffset = 0) => {
       if (!append) setLoading(true);
       else setLoadingMore(true);
 
-      const currentOffset = append ? offset + PAGE_SIZE : 0;
+      const currentOffset = append ? startOffset + PAGE_SIZE : 0;
 
       try {
         const { data, count, error } = await buildQuery(f, currentSort, currentOffset);
@@ -302,7 +303,7 @@ export default function DecouvrirPage() {
         setLoadingMore(false);
       }
     },
-    [buildQuery, offset]
+    [buildQuery]
   );
 
   // Initial load + categories
@@ -355,48 +356,7 @@ export default function DecouvrirPage() {
   return (
     <div className="min-h-screen bg-surface">
 
-      {/* ── Navbar ── */}
-      <header className="sticky top-0 z-50 bg-on-secondary-fixed shadow-sm">
-        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <div className="rounded-[10px] overflow-hidden">
-              <Image src="/Rizen.png" alt="Rizen" width={80} height={32} className="h-8 w-auto object-contain" priority />
-            </div>
-          </Link>
-          <nav className="hidden md:flex items-center gap-1">
-            {[
-              { href: "/", label: "Accueil" },
-              { href: "/decouvrir", label: "Découvrir" },
-              { href: "#comment-ca-marche", label: "Comment ça marche" },
-            ].map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={`px-4 py-2 rounded-full text-label-md transition-colors ${
-                  l.href === "/decouvrir"
-                    ? "text-primary-container font-semibold bg-surface-container-lowest/10"
-                    : "text-secondary-fixed-dim hover:text-on-secondary"
-                }`}
-              >
-                {l.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="flex items-center gap-3">
-            <Link href="/auth/login" className="hidden sm:block text-secondary-fixed-dim hover:text-on-secondary text-label-md transition-colors px-3 py-2">
-              Se connecter
-            </Link>
-            <Link
-              href="/annonces/creer"
-              className="inline-flex items-center gap-1.5 h-[40px] px-4 rounded-full bg-primary-container text-white text-label-md font-semibold hover:opacity-90 active:scale-[0.98] transition-all"
-            >
-              <span className="material-symbols-outlined text-[18px]">add</span>
-              <span className="hidden sm:inline">Publier une annonce</span>
-              <span className="sm:hidden">Publier</span>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <NavbarDecouvrir />
 
       {/* ── Search hero ── */}
       <div className="bg-on-secondary-fixed pb-6 pt-4">
@@ -473,7 +433,7 @@ export default function DecouvrirPage() {
       </div>
 
       {/* ── Category tabs ── */}
-      <div className="bg-surface-container-lowest border-b border-surface-container-highest sticky top-16 z-40">
+      <div className="bg-surface-container-lowest border-b border-surface-container-highest sticky top-[68px] z-40">
         <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-3">
             <button
@@ -522,7 +482,7 @@ export default function DecouvrirPage() {
 
           {/* ── Sidebar ── */}
           <aside className="hidden lg:block w-60 shrink-0">
-            <div className="bg-surface-container-lowest rounded-3xl shadow-card p-5 sticky top-36 space-y-6">
+            <div className="bg-surface-container-lowest rounded-3xl shadow-card p-5 sticky top-[124px] space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-on-secondary-fixed">
                   <span className="material-symbols-outlined text-[20px]">tune</span>
@@ -717,7 +677,7 @@ export default function DecouvrirPage() {
                 {annonces.length < total && (
                   <div className="flex flex-col items-center gap-2 mt-8">
                     <button
-                      onClick={() => loadAnnonces(filters, sort, true)}
+                      onClick={() => loadAnnonces(filters, sort, true, offset)}
                       disabled={loadingMore}
                       className="inline-flex items-center gap-2 h-[52px] px-8 rounded-full bg-surface-container-lowest shadow-card text-on-secondary-fixed text-label-lg font-semibold hover:bg-surface-container-low transition-all disabled:opacity-60"
                     >

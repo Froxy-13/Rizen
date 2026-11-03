@@ -65,11 +65,32 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Redirection si déjà connecté sur /auth/* ──────────────────────
-  if (pathname.startsWith("/auth/")) {
+  // /auth/callback est exclu : Google y renvoie le code PKCE avant qu'une session existe
+  if (pathname.startsWith("/auth/") && pathname !== "/auth/callback") {
     if (user) {
-      return NextResponse.redirect(new URL("/", request.url));
+      return NextResponse.redirect(new URL("/feed", request.url));
     }
     return response;
+  }
+
+  // ── Protection routes post-connexion ──────────────────────────────
+  const protectedRoutes = [
+    "/feed",
+    "/messages",
+    "/profil",
+    "/favoris",
+    "/notifications",
+    "/parametres",
+    "/annonces/creer",
+    "/annonces/modifier",
+    "/negociations",
+    "/paiement",
+  ];
+  const isProtected = protectedRoutes.some((r) => pathname === r || pathname.startsWith(r + "/"));
+  if (isProtected && !user) {
+    const gateUrl = new URL("/auth/gate", request.url);
+    gateUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(gateUrl);
   }
 
   return response;
@@ -77,8 +98,18 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Protège toutes les routes /admin et /auth
     "/admin/:path*",
     "/auth/:path*",
+    "/feed",
+    "/messages",
+    "/messages/:path*",
+    "/profil/:path*",
+    "/favoris",
+    "/notifications",
+    "/parametres",
+    "/annonces/creer",
+    "/annonces/:id/modifier",
+    "/negociations/:path*",
+    "/paiement/:path*",
   ],
 };
