@@ -34,36 +34,55 @@ export function NavbarAuth({ prenom, photo }: NavbarAuthProps) {
   const [dropdownOpen, setDropdownOpen]     = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount]       = useState(0);
+  const [notifCount, setNotifCount]         = useState(0);
   const dropdownRef  = useRef<HTMLDivElement>(null);
   const router   = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    async function fetchUnread() {
+    async function fetchCounts() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Messages non lus
       const { data: parts } = await supabase
         .from("conversation_participants")
         .select("conversation_id")
         .eq("utilisateur_id", user.id);
       const convIds = (parts ?? []).map((p) => p.conversation_id);
-      if (convIds.length === 0) return;
-      const { data: msgs } = await supabase
-        .from("messages")
-        .select("conversation_id")
-        .in("conversation_id", convIds)
-        .neq("sender_id", user.id)
+      if (convIds.length > 0) {
+        const { data: msgs } = await supabase
+          .from("messages")
+          .select("conversation_id")
+          .in("conversation_id", convIds)
+          .neq("sender_id", user.id)
+          .eq("lu", false);
+        setUnreadCount((msgs ?? []).length);
+      }
+
+      // Notifications non lues
+      const { data: notifs } = await supabase
+        .from("notifications")
+        .select("id")
+        .eq("utilisateur_id", user.id)
         .eq("lu", false);
-      setUnreadCount((msgs ?? []).length);
+      setNotifCount((notifs ?? []).length);
     }
-    fetchUnread();
+    fetchCounts();
 
     // Mise à jour temps réel depuis MessagesClient (page /messages)
-    const handler = (e: Event) => {
+    const msgHandler = (e: Event) => {
       setUnreadCount((e as CustomEvent<number>).detail);
     };
-    window.addEventListener("unread-count-changed", handler);
-    return () => window.removeEventListener("unread-count-changed", handler);
+    const notifHandler = (e: Event) => {
+      setNotifCount((e as CustomEvent<number>).detail);
+    };
+    window.addEventListener("unread-count-changed", msgHandler);
+    window.addEventListener("notification-count-changed", notifHandler);
+    return () => {
+      window.removeEventListener("unread-count-changed", msgHandler);
+      window.removeEventListener("notification-count-changed", notifHandler);
+    };
   }, []);
 
   // Close desktop dropdown on outside click
@@ -142,14 +161,19 @@ export function NavbarAuth({ prenom, photo }: NavbarAuthProps) {
               <span className="hidden sm:inline">Vendre</span>
             </Link>
 
-            {/* Cloche — desktop seulement */}
+            {/* Cloche — désactivée (version future)
             <Link
               href="/notifications"
               className="relative hidden sm:flex h-10 w-10 items-center justify-center rounded-full text-white/85 hover:bg-white/10 transition-colors"
             >
               <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[#FC7138] ring-2 ring-[#131B2D]" />
+              {notifCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#FC7138] px-0.5 text-[9px] font-bold text-white ring-2 ring-[#131B2D]">
+                  {notifCount > 9 ? "9+" : notifCount}
+                </span>
+              )}
             </Link>
+            */}
 
             {/* Avatar dropdown — desktop */}
             <div className="relative hidden md:block" ref={dropdownRef}>
@@ -242,6 +266,10 @@ export function NavbarAuth({ prenom, photo }: NavbarAuthProps) {
                 )}
               </Link>
             ))}
+
+            {/* Notifications mobile — désactivé (version future)
+            <Link href="/notifications" ...>...</Link>
+            */}
 
             <div className="my-3 border-t border-white/10" />
 

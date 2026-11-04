@@ -1,7 +1,7 @@
 # Rizen — Base de données Supabase : Tables & Policies RLS
 
 > URL : `https://wzujxtmjaojdqipqfkwn.supabase.co`  
-> Dernière mise à jour : 2026-11-03 (migration_v2.sql appliquée + accusé de lecture messages)
+> Dernière mise à jour : 2026-11-04 (section 12 appliquée : table notifications + RLS + triggers automatiques — Realtime activé)
 
 ---
 
@@ -213,6 +213,24 @@
 
 ---
 
+### `notifications`
+| Colonne | Type | Nullable | Défaut |
+|---|---|---|---|
+| id | integer (PK, auto) | NO | nextval |
+| utilisateur_id | uuid → auth.users.id | NO | — |
+| titre | varchar | NO | — |
+| message | text | NO | — |
+| type | varchar | NO | `'systeme'` — valeurs : `message` / `negociation` / `systeme` |
+| lu | boolean | NO | `false` |
+| lien | varchar | YES | NULL — URL de navigation au clic |
+| date_notification | timestamptz | YES | now() |
+| created_at | timestamptz | YES | now() |
+
+> Alimentée automatiquement par triggers SQL (`trg_notifier_message`, `trg_notifier_negociation`).  
+> Jamais écrite directement par le client.
+
+---
+
 ### `signalements`
 | Colonne | Type | Nullable | Défaut |
 |---|---|---|---|
@@ -375,6 +393,14 @@ sous_categories.id
 | Créer | public | INSERT | `auth.uid() = utilisateur_id` |
 | Traiter | public | UPDATE | `est_superadmin()` |
 
+### `notifications`
+| Policy | Rôle | Opération | Condition |
+|---|---|---|---|
+| Lire ses notifications | authenticated | SELECT | `auth.uid() = utilisateur_id` |
+| Marquer notification lue | authenticated | UPDATE | `auth.uid() = utilisateur_id` — `WITH CHECK (lu = TRUE)` |
+
+> Les triggers SQL (`SECURITY DEFINER`) insèrent les notifications sans passer par les policies.
+
 ### `transactions` & `paiements`
 | Policy | Rôle | Opération | Condition |
 |---|---|---|---|
@@ -395,6 +421,8 @@ sous_categories.id
 | `maj_note_vendeur` | trigger function | Recalcule `profils.note_moyenne` et `profils.nombre_avis` après INSERT/DELETE sur `avis` |
 | `maj_nombre_ventes` | trigger function | Incrémente/décrémente `profils.nombre_ventes` quand `annonces.statut` change vers/depuis `vendue` |
 | `set_updated_at` | trigger function | Met à jour `updated_at = now()` avant chaque UPDATE sur `annonces` et `profils` |
+| `notifier_nouveau_message` | trigger function | Insère une notification pour le destinataire à chaque INSERT sur `messages` (SECURITY DEFINER) |
+| `notifier_statut_negociation` | trigger function | Insère une notification pour l'acheteur quand `negociations.statut` → `acceptee` ou `refusee` (SECURITY DEFINER) |
 
 ---
 
@@ -407,6 +435,8 @@ sous_categories.id
 | `trg_maj_nombre_ventes` | `annonces` | AFTER UPDATE OF statut | `maj_nombre_ventes()` |
 | `trg_annonces_updated_at` | `annonces` | BEFORE UPDATE | `set_updated_at()` |
 | `trg_profils_updated_at` | `profils` | BEFORE UPDATE | `set_updated_at()` |
+| `trg_notifier_message` | `messages` | AFTER INSERT | `notifier_nouveau_message()` |
+| `trg_notifier_negociation` | `negociations` | AFTER UPDATE OF statut | `notifier_statut_negociation()` |
 
 ---
 
@@ -420,6 +450,7 @@ Tables avec Supabase Realtime activé (utilisées dans le client) :
 | `messages` | INSERT (global) | Nouveau message dans une conv non-ouverte — incrémente le badge non-lu + met à jour le preview sidebar |
 | `messages` | UPDATE | Passage de `lu` à `true` — ticks passent de gris à orange côté expéditeur |
 | `negociations` | UPDATE | Changement de `statut` (acceptée/refusée) — mise à jour des cartes de négociation en temps réel |
+| `notifications` | INSERT | Nouvelle notification reçue — badge cloche + ajout en tête de liste |
 
 > Pour que le Realtime fonctionne, les tables doivent avoir la réplication activée dans le dashboard Supabase : **Database → Replication → Tables**.
 

@@ -29,6 +29,7 @@ export function NavbarDecouvrir() {
   const [prenom, setPrenom]             = useState<string | null>(null);
   const [photo, setPhoto]               = useState<string | null>(null);
   const [unreadCount, setUnreadCount]   = useState(0);
+  const [notifCount, setNotifCount]     = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -44,7 +45,7 @@ export function NavbarDecouvrir() {
       setPhoto(profil?.photo ?? null);
       setStatus("auth");
 
-      // Comptage messages non lus (messages reçus avec lu = false)
+      // Messages non lus
       const { data: parts } = await supabase
         .from("conversation_participants")
         .select("conversation_id")
@@ -59,14 +60,29 @@ export function NavbarDecouvrir() {
           .eq("lu", false);
         setUnreadCount((msgs ?? []).length);
       }
+
+      // Notifications non lues
+      const { data: notifs } = await supabase
+        .from("notifications")
+        .select("id")
+        .eq("utilisateur_id", user.id)
+        .eq("lu", false);
+      setNotifCount((notifs ?? []).length);
     });
 
-    // Mise à jour temps réel depuis MessagesClient (page /messages)
-    const handler = (e: Event) => {
+    // Mise à jour temps réel
+    const msgHandler = (e: Event) => {
       setUnreadCount((e as CustomEvent<number>).detail);
     };
-    window.addEventListener("unread-count-changed", handler);
-    return () => window.removeEventListener("unread-count-changed", handler);
+    const notifHandler = (e: Event) => {
+      setNotifCount((e as CustomEvent<number>).detail);
+    };
+    window.addEventListener("unread-count-changed", msgHandler);
+    window.addEventListener("notification-count-changed", notifHandler);
+    return () => {
+      window.removeEventListener("unread-count-changed", msgHandler);
+      window.removeEventListener("notification-count-changed", notifHandler);
+    };
   }, []);
 
   useEffect(() => {
@@ -160,13 +176,9 @@ export function NavbarDecouvrir() {
                   <span className="hidden sm:inline">Vendre</span>
                 </Link>
 
-                {/* Cloche desktop */}
-                <Link href="/notifications"
-                  className="relative hidden sm:flex h-10 w-10 items-center justify-center rounded-full text-white/85 hover:bg-white/10 transition-colors"
-                >
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[#FC7138] ring-2 ring-[#131B2D]" />
-                </Link>
+                {/* Cloche desktop — désactivée (version future)
+                <Link href="/notifications" ...>...</Link>
+                */}
 
                 {/* Avatar dropdown desktop */}
                 <div className="relative hidden md:block" ref={dropdownRef}>
@@ -271,6 +283,9 @@ export function NavbarDecouvrir() {
 
             {status === "auth" && (
               <>
+                {/* Notifications mobile — désactivé (version future)
+                <Link href="/notifications" ...>...</Link>
+                */}
                 <div className="my-3 border-t border-white/10" />
                 {dropdownLinks.map(({ href, label, icon: Icon }) => (
                   <Link key={href} href={href}

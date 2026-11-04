@@ -389,5 +389,102 @@ CREATE POLICY "Marquer message lu" ON messages
   WITH CHECK (lu = TRUE);
 
 -- ──────────────────────────────────────────────────────────────
+-- 12. TABLE notifications + RLS + triggers automatiques
+-- ──────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id               SERIAL PRIMARY KEY,
+  utilisateur_id   UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  titre            VARCHAR NOT NULL,
+  message          TEXT NOT NULL,
+  type             VARCHAR NOT NULL DEFAULT 'systeme',
+  lu               BOOLEAN NOT NULL DEFAULT FALSE,
+  lien             VARCHAR DEFAULT NULL,
+  date_notification TIMESTAMPTZ DEFAULT now(),
+  created_at       TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user
+  ON notifications(utilisateur_id, lu, date_notification DESC);
+
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Lire ses notifications" ON notifications;
+CREATE POLICY "Lire ses notifications" ON notifications
+  FOR SELECT TO authenticated
+  USING (auth.uid() = utilisateur_id);
+
+DROP POLICY IF EXISTS "Marquer notification lue" ON notifications;
+CREATE POLICY "Marquer notification lue" ON notifications
+  FOR UPDATE TO authenticated
+  USING (auth.uid() = utilisateur_id)
+  WITH CHECK (lu = TRUE);
+
+-- ── Triggers notifications — désactivés (version future) ─────────────
+-- Les fonctions et triggers ci-dessous seront activés dans une prochaine version.
+-- La table notifications et ses policies RLS sont déjà en place.
+
+-- CREATE OR REPLACE FUNCTION notifier_nouveau_message()
+-- RETURNS TRIGGER AS $$
+-- DECLARE
+--   v_expediteur_prenom VARCHAR;
+--   v_destinataire_id   UUID;
+-- BEGIN
+--   SELECT cp.utilisateur_id INTO v_destinataire_id
+--   FROM conversation_participants cp
+--   WHERE cp.conversation_id = NEW.conversation_id
+--     AND cp.utilisateur_id <> NEW.sender_id
+--   LIMIT 1;
+--   IF v_destinataire_id IS NULL THEN RETURN NEW; END IF;
+--   SELECT prenom INTO v_expediteur_prenom FROM profils WHERE id = NEW.sender_id;
+--   INSERT INTO notifications (utilisateur_id, titre, message, type, lien)
+--   VALUES (
+--     v_destinataire_id,
+--     'Nouveau message de ' || COALESCE(v_expediteur_prenom, 'quelqu''un'),
+--     CASE WHEN NEW.type = 'negociation' THEN 'Vous avez reçu une offre de prix.'
+--          ELSE COALESCE(LEFT(NEW.contenu, 80), 'Message reçu') END,
+--     CASE WHEN NEW.type = 'negociation' THEN 'negociation' ELSE 'message' END,
+--     '/messages?conv=' || NEW.conversation_id::TEXT
+--   );
+--   RETURN NEW;
+-- EXCEPTION WHEN OTHERS THEN RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql SECURITY DEFINER;
+--
+-- DROP TRIGGER IF EXISTS trg_notifier_message ON messages;
+-- CREATE TRIGGER trg_notifier_message
+--   AFTER INSERT ON messages
+--   FOR EACH ROW EXECUTE FUNCTION notifier_nouveau_message();
+
+-- CREATE OR REPLACE FUNCTION notifier_statut_negociation()
+-- RETURNS TRIGGER AS $$
+-- DECLARE
+--   v_titre VARCHAR; v_msg TEXT; v_lien VARCHAR;
+-- BEGIN
+--   IF OLD.statut = NEW.statut THEN RETURN NEW; END IF;
+--   IF NEW.statut NOT IN ('acceptee', 'refusee') THEN RETURN NEW; END IF;
+--   v_lien := CASE WHEN NEW.conversation_id IS NOT NULL
+--     THEN '/messages?conv=' || NEW.conversation_id::TEXT
+--     ELSE '/profil?tab=transactions' END;
+--   IF NEW.statut = 'acceptee' THEN
+--     v_titre := 'Offre acceptée';
+--     v_msg   := 'Votre offre de prix a été acceptée. Vous pouvez maintenant procéder à l''achat.';
+--   ELSE
+--     v_titre := 'Offre refusée';
+--     v_msg   := 'Votre offre de prix a été refusée par le vendeur.';
+--   END IF;
+--   INSERT INTO notifications (utilisateur_id, titre, message, type, lien)
+--   VALUES (NEW.acheteur_id, v_titre, v_msg, 'negociation', v_lien);
+--   RETURN NEW;
+-- EXCEPTION WHEN OTHERS THEN RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql SECURITY DEFINER;
+--
+-- DROP TRIGGER IF EXISTS trg_notifier_negociation ON negociations;
+-- CREATE TRIGGER trg_notifier_negociation
+--   AFTER UPDATE OF statut ON negociations
+--   FOR EACH ROW EXECUTE FUNCTION notifier_statut_negociation();
+
+-- ──────────────────────────────────────────────────────────────
 -- Fin de la migration
 -- ──────────────────────────────────────────────────────────────
